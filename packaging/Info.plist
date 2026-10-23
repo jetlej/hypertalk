@@ -33,11 +33,11 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Hypertalk records while you hold the dictation key and turns your speech into text on this Mac. Audio never leaves it.</string>
 	<key>SUEnableAutomaticChecks</key>
-	<false/>
+	<true/>
 	<key>SUFeedURL</key>
 	<string>https://github.com/jetlej/hypertalk/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>sBKarVRumHAb75Avth4zTROhclldBN+nUC3ffkhcoTw=</string>
+	<string>gmYgTuGkPo26ooIfiykZxTVd4l0bweXMG4zWtVtchVE=</string>
 	<key>SURequireSignedFeed</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

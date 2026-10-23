@@ -41,9 +41,7 @@ final class UpdaterTests: XCTestCase {
         let data = try Data(contentsOf: root.appendingPathComponent("packaging/Info.plist"))
         let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
         XCTAssertEqual(plist["SUFeedURL"] as? String, feed)
-        // Off until the fork publishes its own signed releases: the public key
-        // is still upstream's, so no feed of ours would verify.
-        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, false)
+        XCTAssertEqual(plist["SUEnableAutomaticChecks"] as? Bool, true)
         XCTAssertEqual(plist["SUScheduledCheckInterval"] as? Int, 86400)
         XCTAssertEqual(plist["SURequireSignedFeed"] as? Bool, true)
         XCTAssertEqual(plist["SUVerifyUpdateBeforeExtraction"] as? Bool, true)
