@@ -1,6 +1,6 @@
 # Records release download counts once a day on the `stats` branch, since GitHub
 # only keeps a running total per asset. appcast.xml fetches approximate active
-# installs: every copy of Parrot checks for updates once a day.
+# installs: every copy of Hypertalk checks for updates once a day.
 name: downloads
 
 on:

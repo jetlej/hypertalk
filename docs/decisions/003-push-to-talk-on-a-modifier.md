@@ -2,7 +2,7 @@
 
 Last updated: `2026.09.27`
 
-> Parrot has one interaction: hold a modifier key, speak, release. The key is configurable among fn and the left or right Option, Command, Control, and Shift keys. The event tap listens to modifier changes only, so Parrot never sees what the user types.
+> Hypertalk has one interaction: hold a modifier key, speak, release. The key is configurable among fn and the left or right Option, Command, Control, and Shift keys. The event tap listens to modifier changes only, so Hypertalk never sees what the user types.
 
 ## 1. Decision
 
@@ -13,7 +13,7 @@ Last updated: `2026.09.27`
 
 ## 2. Rationale
 
-A tap that sees key-down events sees every keystroke, including passwords; that is keylogger surface Parrot does not need. A modifier-only tap cannot see the C in ⌘C, which is why side-specific shortcuts are handled with the short-capture and chord rules rather than by inspecting keys.
+A tap that sees key-down events sees every keystroke, including passwords; that is keylogger surface Hypertalk does not need. A modifier-only tap cannot see the C in ⌘C, which is why side-specific shortcuts are handled with the short-capture and chord rules rather than by inspecting keys.
 
 Toggle and latch modes were proposed in several PRs. They were rejected to keep one interaction that is predictable, starts instantly, and cannot be left recording by accident; they also need a length cap and recovery for a missed release, which push-to-talk avoids. Non-modifier keys and chords were rejected because a listen-only tap cannot stop them from also reaching the focused app.
 

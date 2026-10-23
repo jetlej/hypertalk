@@ -1,46 +1,46 @@
 #!/usr/bin/env bash
-# Build, sign, and install a local Parrot.app for testing.
+# Build, sign, and install a local Hypertalk.app for testing.
 #   scripts/dev-install.sh
 #
 # macOS keys the Accessibility and Microphone grants to the app's code
 # identity. An ad-hoc signature changes on every build, so each rebuild
 # silently loses the grants. Signing with the Developer ID certificate and
-# the fixed bundle ID com.humanitas.parrot (packaging/Info.plist) keeps one
+# the fixed bundle ID com.jetlej.hypertalk (packaging/Info.plist) keeps one
 # identity across rebuilds and releases.
 #
 # Installs to /Applications, or ~/Applications when /Applications is not
-# writable, and links /usr/local/bin/parrot to the app's executable. A plain
+# writable, and links /usr/local/bin/hypertalk to the app's executable. A plain
 # binary already at that path (an old CLI install) is only replaced after you
 # say yes. A running copy is quit and reopened.
 #
-#   PARROT_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
-#   PARROT_INSTALL_DIR    where Parrot.app goes
-#   PARROT_LINK_DIR       where the parrot link goes (default /usr/local/bin;
+#   HYPERTALK_SIGN_IDENTITY  signing identity (default: the keychain's Developer ID)
+#   HYPERTALK_INSTALL_DIR    where Hypertalk.app goes
+#   HYPERTALK_LINK_DIR       where the hypertalk link goes (default /usr/local/bin;
 #                         set it empty to skip the link)
-#   PARROT_NO_RESTART=1   don't quit and reopen a running copy
+#   HYPERTALK_NO_RESTART=1   don't quit and reopen a running copy
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ -z "${PARROT_INSTALL_DIR:-}" ]; then
+if [ -z "${HYPERTALK_INSTALL_DIR:-}" ]; then
     if [ -w /Applications ]; then
-        PARROT_INSTALL_DIR=/Applications
+        HYPERTALK_INSTALL_DIR=/Applications
     else
-        PARROT_INSTALL_DIR="$HOME/Applications"
+        HYPERTALK_INSTALL_DIR="$HOME/Applications"
     fi
 fi
-LINK_DIR="${PARROT_LINK_DIR-/usr/local/bin}"
-BUILD="${PARROT_BUILD_DIR:-build}"
-DEST="$PARROT_INSTALL_DIR/Parrot.app"
-EXE="$DEST/Contents/MacOS/parrot"
+LINK_DIR="${HYPERTALK_LINK_DIR-/usr/local/bin}"
+BUILD="${HYPERTALK_BUILD_DIR:-build}"
+DEST="$HYPERTALK_INSTALL_DIR/Hypertalk.app"
+EXE="$DEST/Contents/MacOS/hypertalk"
 
 VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0)"
-PARROT_TIMESTAMP=none PARROT_BUILD_DIR="$BUILD" scripts/build-app.sh "${VERSION#v}"
+HYPERTALK_TIMESTAMP=none HYPERTALK_BUILD_DIR="$BUILD" scripts/build-app.sh "${VERSION#v}"
 
 WAS_RUNNING=0
-if [ -z "${PARROT_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
+if [ -z "${HYPERTALK_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
     WAS_RUNNING=1
-    echo "→ quitting the running Parrot"
+    echo "→ quitting the running Hypertalk"
     pkill -TERM -f "^$EXE" || true
     for _ in 1 2 3 4 5 6 7 8 9 10; do
         pgrep -f "^$EXE" >/dev/null 2>&1 || break
@@ -49,17 +49,17 @@ if [ -z "${PARROT_NO_RESTART:-}" ] && pgrep -f "^$EXE" >/dev/null 2>&1; then
 fi
 
 echo "→ installing to $DEST"
-mkdir -p "$PARROT_INSTALL_DIR"
+mkdir -p "$HYPERTALK_INSTALL_DIR"
 rm -rf "$DEST"
-ditto "$BUILD/Parrot.app" "$DEST"
+ditto "$BUILD/Hypertalk.app" "$DEST"
 
 if [ -n "$LINK_DIR" ]; then
-    LINK="$LINK_DIR/parrot"
+    LINK="$LINK_DIR/hypertalk"
     REPLACE=1
     if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
         REPLACE=0
         if [ -t 0 ]; then
-            printf '%s is a separate parrot binary (an old CLI install). Replace it with a link to %s? [y/N] ' "$LINK" "$EXE"
+            printf '%s is a separate hypertalk binary (an old CLI install). Replace it with a link to %s? [y/N] ' "$LINK" "$EXE"
             read -r answer
             case "$answer" in y|Y|yes) REPLACE=1 ;; esac
         fi
@@ -75,7 +75,7 @@ if [ -n "$LINK_DIR" ]; then
 fi
 
 if [ "$WAS_RUNNING" = 1 ]; then
-    echo "→ reopening Parrot"
+    echo "→ reopening Hypertalk"
     open "$DEST"
 fi
 
@@ -83,4 +83,4 @@ if [ -f "$HOME/Library/LaunchAgents/com.digimata.parrot.plist" ]; then
     echo "note: the old LaunchAgent is still installed. Open $DEST once; it removes the agent."
 fi
 
-echo "✓ installed Parrot $("$EXE" --version 2>/dev/null || echo "$VERSION") at $DEST"
+echo "✓ installed Hypertalk $("$EXE" --version 2>/dev/null || echo "$VERSION") at $DEST"

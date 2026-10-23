@@ -1,9 +1,9 @@
-# Builds, signs, notarizes, and publishes Parrot.app as a DMG whenever a
+# Builds, signs, notarizes, and publishes Hypertalk.app as a DMG whenever a
 # v* tag is pushed, or on demand for an existing tag. install.sh and the
-# README download releases/latest/download/Parrot.dmg.
+# README download releases/latest/download/Hypertalk.dmg.
 #
-# It also publishes the in-app update (#50): Parrot-<version>.zip, signed
-# with the Sparkle EdDSA key, and appcast.xml, which Parrot reads from
+# It also publishes the in-app update (#50): Hypertalk-<version>.zip, signed
+# with the Sparkle EdDSA key, and appcast.xml, which Hypertalk reads from
 # releases/latest/download/appcast.xml (SUFeedURL in packaging/Info.plist).
 # Publishing a release is the whole update step; there is no manual appcast.
 #
@@ -13,7 +13,7 @@
 #                               private key, a .p12 export, base64-encoded
 #                               (base64 -i cert.p12)
 #   MACOS_CERTIFICATE_PASSWORD  the password given when exporting the .p12
-#   NOTARY_KEY                  the Parrot-only App Store Connect API key
+#   NOTARY_KEY                  the Hypertalk-only App Store Connect API key
 #                               (.p8), base64-encoded
 #   NOTARY_KEY_ID               its Key ID
 #   NOTARY_ISSUER_ID            the team's Issuer ID
@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   release:
-    name: build, sign, notarize, and publish Parrot.app
+    name: build, sign, notarize, and publish Hypertalk.app
     runs-on: macos-15
     timeout-minutes: 45
     env:
@@ -133,11 +133,11 @@ jobs:
       - name: verify
         run: |
           set -eu
-          APP=build/Parrot.app
+          APP=build/Hypertalk.app
           codesign --verify --deep --strict --verbose=2 "$APP"
           spctl -a -vv -t exec "$APP" 2>&1 | tee "$RUNNER_TEMP/spctl.txt"
           grep -q "Notarized Developer ID" "$RUNNER_TEMP/spctl.txt"
-          xcrun stapler validate "dist/Parrot-${VERSION#v}.dmg"
+          xcrun stapler validate "dist/Hypertalk-${VERSION#v}.dmg"
 
       # generate_appcast signs the zip (the enclosure's edSignature) and, since
       # the app sets SURequireSignedFeed, the appcast itself. The feed holds
@@ -149,7 +149,7 @@ jobs:
           set -eu
           SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
           FEED="$RUNNER_TEMP/appcast"
-          ZIP="Parrot-${VERSION#v}.zip"
+          ZIP="Hypertalk-${VERSION#v}.zip"
           mkdir -p "$FEED"
           cp "dist/$ZIP" "$FEED/"
           printf '%s' "$SPARKLE_PRIVATE_KEY" | "$SPARKLE_BIN/generate_appcast" --ed-key-file - \
@@ -172,21 +172,21 @@ jobs:
         run: |
           set -eu
           cd dist
-          cp "Parrot-${VERSION#v}.dmg" Parrot.dmg
-          shasum -a 256 Parrot.dmg > Parrot.dmg.sha256
+          cp "Hypertalk-${VERSION#v}.dmg" Hypertalk.dmg
+          shasum -a 256 Hypertalk.dmg > Hypertalk.dmg.sha256
           ls -lh
 
       - name: publish the release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
-          name: Parrot ${{ env.VERSION }}
+          name: Hypertalk ${{ env.VERSION }}
           files: |
-            dist/Parrot-*.dmg
-            dist/Parrot-*.dmg.sha256
-            dist/Parrot.dmg
-            dist/Parrot.dmg.sha256
-            dist/Parrot-*.zip
+            dist/Hypertalk-*.dmg
+            dist/Hypertalk-*.dmg.sha256
+            dist/Hypertalk.dmg
+            dist/Hypertalk.dmg.sha256
+            dist/Hypertalk-*.zip
             dist/appcast.xml
           generate_release_notes: true
           fail_on_unmatched_files: true

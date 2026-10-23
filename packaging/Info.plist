@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Parrot</string>
+	<string>Hypertalk</string>
 	<key>CFBundleExecutable</key>
-	<string>parrot</string>
+	<string>hypertalk</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.humanitas.parrot</string>
+	<string>com.jetlej.hypertalk</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Parrot</string>
+	<string>Hypertalk</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -29,15 +29,13 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © Humanitas Labs. MIT License.</string>
+	<string>Hypertalk, a fork of Hypertalk by Humanitas Labs. MIT License.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Parrot records while you hold the dictation key and turns your speech into text on this Mac. Audio never leaves it.</string>
+	<string>Hypertalk records while you hold the dictation key and turns your speech into text on this Mac. Audio never leaves it.</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/humanitas-labs/parrot/releases/latest/download/appcast.xml</string>
-	<!-- Public half of the Parrot update key (generate_keys --account parrot). The private
-	     half is the SPARKLE_PRIVATE_KEY repository secret; release.yml checks they match. -->
+	<string>https://github.com/jetlej/hypertalk/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>sBKarVRumHAb75Avth4zTROhclldBN+nUC3ffkhcoTw=</string>
 	<key>SURequireSignedFeed</key>

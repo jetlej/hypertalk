@@ -2,12 +2,12 @@
 
 Last updated: `2026.09.27`
 
-> Transcript text is never written to logs, disk, or stats. Everything Parrot keeps lives in fixed, owner-only locations: settings and the dictionary in `~/.config/parrot`, models and stats in Application Support, logs in Logs, debug captures in Caches.
+> Transcript text is never written to logs, disk, or stats. Everything Hypertalk keeps lives in fixed, owner-only locations: settings and the dictionary in `~/.config/hypertalk`, models and stats in Application Support, logs in Logs, debug captures in Caches.
 
 ## 1. Decision
 
-- **No transcript text at rest.** Logs record timings and character counts. Stats record counts. The dictionary is the only user-authored text Parrot stores.
-- **Fixed locations.** `~/.config/parrot/` holds settings and the dictionary (ADR-002). `~/Library/Application Support/parrot/` holds models and stats. `~/Library/Logs/parrot/` holds daemon logs. `~/Library/Caches/parrot/` holds `--dump-wav` captures. `Paths` defines them all.
+- **No transcript text at rest.** Logs record timings and character counts. Stats record counts. The dictionary is the only user-authored text Hypertalk stores.
+- **Fixed locations.** `~/.config/hypertalk/` holds settings and the dictionary (ADR-002). `~/Library/Application Support/hypertalk/` holds models and stats. `~/Library/Logs/hypertalk/` holds daemon logs. `~/Library/Caches/hypertalk/` holds `--dump-wav` captures. `Paths` defines them all.
 - **Owner-only.** Directories are 0700 and files 0600. Existing symlinks are refused, and new files are created with `O_EXCL | O_NOFOLLOW`.
 - **Models are downloaded into Application Support** by passing an explicit `downloadBase` to WhisperKit.
 
@@ -26,5 +26,5 @@ Models went to `~/Documents/huggingface`, the swift-transformers default. That t
 
 ## 4. When to Revisit
 
-- If Parrot adds transcript history as a feature, it needs an explicit opt-in, a stated location, and its own ADR.
+- If Hypertalk adds transcript history as a feature, it needs an explicit opt-in, a stated location, and its own ADR.
 - If the app becomes sandboxed, the locations move into the container.
