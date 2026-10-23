@@ -91,7 +91,7 @@ public enum Daemon {
         app.setActivationPolicy(.accessory)
 
         let monitor = HotkeyMonitor(key: options.hotkey ?? settings.current.hotkey.key, debug: options.debugHotkey)
-        monitor.setDoubleTapLock(settings.current.hotkey.doubleTapToLock)
+        monitor.setLockMode(settings.current.hotkey.lockMode)
         let capture = AudioCapture(mode: options.captureMode)
         let overlay: RecordingOverlay? = options.noOverlay ? nil : RecordingOverlay()
         if let overlay {
@@ -168,9 +168,9 @@ public enum Daemon {
         // or a hand edit of settings.json (#41). CLI flags only set the
         // starting values of a foreground run.
         settings.observe { old, new in
-            if old.hotkey.doubleTapToLock != new.hotkey.doubleTapToLock {
-                monitor.setDoubleTapLock(new.hotkey.doubleTapToLock)
-                Log.info("double-tap to lock: \(new.hotkey.doubleTapToLock ? "on" : "off")")
+            if old.hotkey.lockMode != new.hotkey.lockMode {
+                monitor.setLockMode(new.hotkey.lockMode)
+                Log.info("hands-free: \(new.hotkey.lockMode.rawValue)")
             }
             if old.output != new.output {
                 overlay?.isEnabled = new.output.showOverlay

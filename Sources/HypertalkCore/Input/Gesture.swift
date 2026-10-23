@@ -13,10 +13,11 @@ import Foundation
 /// Recording still starts on key-down, so press latency is unchanged; a
 /// discarded hold just throws its audio away.
 ///
-/// Double-tap to lock: a tap, then a second press within `doubleTapWindow`,
-/// keeps recording after the key is let go. The next press of the hotkey
-/// stops it and transcribes. A second press held past `minimumHold` is an
-/// ordinary hold instead.
+/// Hands-free (`LockMode`): with `.doubleTap`, a tap and then a second press
+/// within `doubleTapWindow` keeps recording after the key is let go; a second
+/// press held past `minimumHold` is an ordinary hold instead. With
+/// `.singleTap`, any tap shorter than `minimumHold` does. Either way the
+/// next press of the hotkey stops it and transcribes.
 struct Gesture {
     /// Holds shorter than this are taps or shortcuts, not dictation.
     static let minimumHold: TimeInterval = 0.3
@@ -24,8 +25,8 @@ struct Gesture {
     /// counts as a double tap.
     static let doubleTapWindow: TimeInterval = 0.4
 
-    /// Whether a double tap locks the recording on.
-    var lockEnabled = true
+    /// Which tap, if any, locks the recording on.
+    var lockMode: LockMode = .doubleTap
 
     enum Input: Equatable {
         /// The hotkey went down. `othersHeld`: another modifier was already
@@ -84,7 +85,8 @@ struct Gesture {
                 phase = .ignoring
                 return nil
             }
-            let locking = lockEnabled && tapUp.map { time - $0 <= Self.doubleTapWindow } == true
+            let locking = lockMode == .singleTap
+                || (lockMode == .doubleTap && tapUp.map { time - $0 <= Self.doubleTapWindow } == true)
             phase = .recording(since: time, locking: locking)
             return .start
         case (.recording(let since, let locking), .hotkeyUp):
@@ -97,7 +99,7 @@ struct Gesture {
                 return .lock
             }
             phase = .idle
-            lastTapUp = time
+            if lockMode == .doubleTap { lastTapUp = time }
             return .cancel
         case (.locked, .hotkeyDown):
             // Ignore this press's release, like a chord's.
@@ -128,4 +130,15 @@ struct Gesture {
         case .idle, .ignoring: return nil
         }
     }
+}
+
+/// How a recording locks on so it runs with the hotkey up (hands-free).
+/// The raw value is the name in `settings.json`.
+enum LockMode: String, Codable, CaseIterable, Sendable {
+    /// Double-tap the hotkey.
+    case doubleTap = "double-tap"
+    /// Tap the hotkey once.
+    case singleTap = "single-tap"
+    /// Never: only holding the key records.
+    case off
 }

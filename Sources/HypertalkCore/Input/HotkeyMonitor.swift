@@ -71,12 +71,12 @@ final class HotkeyMonitor {
         if let action { emit(action) }
     }
 
-    /// Turns double-tap to lock on or off. A locked recording in progress is
-    /// cancelled when it is turned off.
-    func setDoubleTapLock(_ enabled: Bool) {
-        guard enabled != gesture.lockEnabled else { return }
-        let action = enabled ? nil : gesture.reset()
-        gesture.lockEnabled = enabled
+    /// Changes which tap locks a recording on. A locked recording in
+    /// progress is cancelled.
+    func setLockMode(_ mode: LockMode) {
+        guard mode != gesture.lockMode else { return }
+        let action = gesture.isLocked ? gesture.reset() : nil
+        gesture.lockMode = mode
         if let action { emit(action) }
     }
 

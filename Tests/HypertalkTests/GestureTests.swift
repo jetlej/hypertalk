@@ -106,11 +106,39 @@ final class GestureTests: XCTestCase {
 
     func testDoubleTapDoesNothingWhenLockIsOff() {
         var g = Gesture()
-        g.lockEnabled = false
+        g.lockMode = .off
         _ = g.handle(down, at: 0)
         _ = g.handle(.hotkeyUp, at: 0.1)
         _ = g.handle(down, at: 0.3)
         XCTAssertEqual(g.handle(.hotkeyUp, at: 0.4), .cancel)
+    }
+
+    func testSingleTapLocksAndTheNextPressTranscribes() {
+        var g = Gesture()
+        g.lockMode = .singleTap
+        XCTAssertEqual(g.handle(down, at: 0), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 0.1), .lock)
+        XCTAssertTrue(g.isLocked)
+        XCTAssertEqual(g.handle(down, at: 4), .transcribe)
+        XCTAssertNil(g.handle(.hotkeyUp, at: 4.1))
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testSingleTapModeStillTranscribesAHold() {
+        var g = Gesture()
+        g.lockMode = .singleTap
+        XCTAssertEqual(g.handle(down, at: 0), .start)
+        XCTAssertEqual(g.handle(.hotkeyUp, at: 1.5), .transcribe)
+        XCTAssertFalse(g.isLocked)
+    }
+
+    func testSingleTapModeStillCancelsAChord() {
+        var g = Gesture()
+        g.lockMode = .singleTap
+        XCTAssertEqual(g.handle(down, at: 0), .start)
+        XCTAssertEqual(g.handle(.otherModifier, at: 0.05), .cancel)
+        XCTAssertNil(g.handle(.hotkeyUp, at: 0.1))
+        XCTAssertFalse(g.isLocked)
     }
 
     func testResetCancelsALockedRecording() {

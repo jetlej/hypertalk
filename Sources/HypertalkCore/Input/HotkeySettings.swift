@@ -8,9 +8,9 @@ import CoreGraphics
 struct HotkeySettings: Codable, Equatable {
     /// The modifier held to dictate. An unknown name decodes to the default.
     var key: HotkeyKey = .fn
-    /// Double-tap the key to keep recording without holding it; the next
-    /// press stops and transcribes.
-    var doubleTapToLock = true
+    /// The tap that keeps recording without holding the key; the next press
+    /// stops and transcribes. An unknown name decodes to the default.
+    var lockMode: LockMode = .doubleTap
 
     init() {}
 
@@ -18,7 +18,8 @@ struct HotkeySettings: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let name = try c.decodeIfPresent(String.self, forKey: .key)
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
-        doubleTapToLock = try c.decodeIfPresent(Bool.self, forKey: .doubleTapToLock) ?? true
+        let lock = try c.decodeIfPresent(String.self, forKey: .lockMode)
+        lockMode = lock.flatMap(LockMode.init(rawValue:)) ?? .doubleTap
     }
 }
 

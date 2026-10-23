@@ -21,7 +21,7 @@ Requires macOS 14+ on Apple Silicon. Turn on Hypertalk when macOS asks for Acces
 2. Hold `fn` and speak. A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift. The change applies from the next press.
 3. Release. The transcript is pasted at the cursor, usually within 200–300 ms, and your clipboard is restored.
 
-**Hands-free:** double-tap the hotkey and let go; Hypertalk keeps listening (the pill shows a padlock) until you press the key again. Turn it off under **Double-tap to lock** in Settings.
+**Hands-free:** double-tap the hotkey and let go; Hypertalk keeps listening (the pill shows a padlock) until you press the key again. Under **Hands-free** in Settings, choose **Single tap** to lock with one tap instead, or **Off**.
 
 **Focus changes:** if you switch apps or fields while dictating, the transcript goes to the clipboard instead of pasting. Turn on **Paste when focus changes** in Settings to paste wherever the cursor is.
 
