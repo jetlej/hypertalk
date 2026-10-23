@@ -1,5 +1,7 @@
-# Builds, signs, notarizes, and publishes Hypertalk.app as a DMG whenever a
-# v* tag is pushed, or on demand for an existing tag. install.sh and the
+# Builds, signs, notarizes, and publishes Hypertalk.app as a DMG, on demand
+# for an existing tag. Releases are normally made from a Mac with
+# scripts/release.sh, which needs no secrets; this workflow is the CI
+# alternative once the secrets below are set. install.sh and the
 # README download releases/latest/download/Hypertalk.dmg.
 #
 # It also publishes the in-app update (#50): Hypertalk-<version>.zip, signed
@@ -24,9 +26,6 @@
 name: release
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       tag:

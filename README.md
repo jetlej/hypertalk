@@ -11,7 +11,9 @@ Hold `fn`, speak, release. Your words appear at the cursor. On-device dictation 
 
 ## 1. Install
 
-Hypertalk is a fork of [Parrot](https://github.com/humanitas-labs/parrot) with hands-free recording, auto-learned vocabulary, and every setting in the Settings window. There are no prebuilt releases yet; build it from source (section 6), which installs Hypertalk.app.
+Download [Hypertalk.dmg](https://github.com/jetlej/hypertalk/releases/latest/download/Hypertalk.dmg), drag Hypertalk to Applications, and open it. It is signed and notarized, and updates itself: it checks once a day, and **Check for Updates…** in its menu checks now.
+
+Hypertalk is a fork of [Parrot](https://github.com/humanitas-labs/parrot) with Parakeet transcription, hands-free recording, auto-learned vocabulary, and every setting in the Settings window.
 
 Requires macOS 14+ on Apple Silicon. Turn on Hypertalk when macOS asks for Accessibility and the microphone. The first start downloads the speech model, NVIDIA Parakeet v2 (about 600 MB).
 
@@ -60,6 +62,7 @@ FluidAudio runs NVIDIA Parakeet (or WhisperKit runs Whisper, if you pick a Whisp
 ```sh
 swift build -c release && swift test
 scripts/dev-install.sh      # build, sign, install Hypertalk.app, link the CLI
+scripts/release.sh 0.3.1    # build, notarize, sign the update, publish the GitHub release
 ```
 
 ## 7. License
