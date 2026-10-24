@@ -64,19 +64,8 @@ struct SettingsView: View {
                     .padding(.bottom, 8)
                 Divider()
                 SettingsGroup("General") {
-                    PillRow("Config") {
-                        Button("Open Config File") {
-                            store.createIfMissing()
-                            NSWorkspace.shared.open(store.file)
-                        }
-                        .buttonStyle(.pill)
-                    }
                     HotkeyRow(store: store)
                     LaunchAtLoginRow()
-                    PillRow("Reset") {
-                        Button("Reset to Defaults") { store.write(Settings()) }
-                            .buttonStyle(.pill)
-                    }
                 }
                 Divider()
                 OutputSection(store: store)

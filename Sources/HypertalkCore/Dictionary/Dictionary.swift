@@ -222,8 +222,8 @@ extension UserDictionary {
     /// likely to say. It has no example sentence: those live in settings and
     /// add decoding time to every dictation, so they should be the user's own.
     static let template = UserDictionary(
-        terms: ["WhisperKit"],
-        replacements: [Replacement(from: ["whisper kit"], to: "WhisperKit")]
+        terms: ["Hypertalk"],
+        replacements: [Replacement(from: ["hyper talk"], to: "Hypertalk")]
     ).text().text
 }
 

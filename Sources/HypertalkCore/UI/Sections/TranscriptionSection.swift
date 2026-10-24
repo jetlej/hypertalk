@@ -18,6 +18,8 @@ struct TranscriptionSection: View {
 
     var body: some View {
         SettingsGroup("Transcription") {
+            languagePicker
+
             // Built by hand: LabeledContent aligns the menu with the first
             // line, and it should sit centered beside both.
             HStack {
@@ -49,8 +51,6 @@ struct TranscriptionSection: View {
                     caption(Self.capitalized(state.text))
                 }
             }
-
-            languagePicker
         }
     }
 
@@ -114,15 +114,18 @@ struct TranscriptionSection: View {
         text.prefix(1).uppercased() + text.dropFirst()
     }
 
-    /// Automatic, then every language by name. A saved code Whisper does not
-    /// know shows as Automatic, which is how it is treated.
+    /// Automatic, then every language by name. Choosing one switches to the
+    /// best model for it (`ModelRegistry.best`). A saved code Whisper does
+    /// not know shows as Automatic, which is how it is treated.
     @ViewBuilder private var languagePicker: some View {
-        let multilingual = selectedModel?.isMultilingual ?? false
-        // Parakeet takes no language: v3 detects it on its own.
-        let parakeet = selectedModel?.engine == .parakeet
         let code = store.current.language.code?.lowercased()
         let selected = code.flatMap { SpokenLanguage.whisperLanguages.contains($0) ? $0 : nil }
-        PillRow("Language") {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Language you speak")
+                caption("The model switches to the best one for it.")
+            }
+            Spacer()
             PillMenu(title: selected.map { SpokenLanguage.displayName($0) } ?? "Automatic") {
                 languageToggle("Automatic", nil, selected: selected)
                 Divider()
@@ -130,16 +133,10 @@ struct TranscriptionSection: View {
                     languageToggle(language.name, language.code, selected: selected)
                 }
             }
-            .disabled(!multilingual || parakeet)
         }
 
-        if parakeet, multilingual, let model = selectedModel {
-            caption("\(model.displayName) detects which of its \(model.languages.count) languages you speak on its own.")
-        } else if !multilingual, let model = selectedModel {
-            let only = SpokenLanguage.displayName(model.languages.first ?? "en")
-            caption("\(model.displayName) hears \(only) only; choose a multilingual model to set a language.")
-        } else if store.current.language.code == nil {
-            PillRow("Languages") {
+        if store.current.language.code == nil {
+            PillRow("Automatic chooses from") {
                 SpokenLanguagesButton(store: store)
             }
         }
@@ -148,8 +145,20 @@ struct TranscriptionSection: View {
     private func languageToggle(_ name: String, _ code: String?, selected: String?) -> some View {
         Toggle(name, isOn: Binding(
             get: { selected == code },
-            set: { on in if on { store.update { $0.language.code = code } } }
+            set: { on in
+                guard on else { return }
+                store.update { settings in
+                    settings.language.code = code
+                    settings.model.id = Self.bestModel(for: settings.language)
+                }
+            }
         ))
+    }
+
+    /// The best model for a Language setting: its one language, or with
+    /// Automatic, the languages it chooses from.
+    static func bestModel(for language: LanguageSettings) -> String {
+        ModelRegistry.best(for: language.code.map { [$0] } ?? language.spokenOrPreferred)
     }
 
     private func caption(_ text: String) -> some View {
@@ -192,11 +201,19 @@ private struct SpokenLanguagesList: View {
             if !spoken.contains(code) { next.append(code) }
             // Keep at least one: an empty list trusts nothing.
             guard !next.isEmpty else { return }
-            store.update { $0.language.spoken = next }
+            store.update { settings in
+                settings.language.spoken = next
+                settings.model.id = TranscriptionSection.bestModel(for: settings.language)
+            }
         }) {
             if store.current.language.spoken != nil {
                 Divider().padding(.vertical, 2)
-                Button("Use the Mac's Languages") { store.update { $0.language.spoken = nil } }
+                Button("Use the Mac's Languages") {
+                    store.update { settings in
+                        settings.language.spoken = nil
+                        settings.model.id = TranscriptionSection.bestModel(for: settings.language)
+                    }
+                }
                     .buttonStyle(.link)
             }
         }

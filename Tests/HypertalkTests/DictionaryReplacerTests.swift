@@ -106,7 +106,7 @@ final class DictionaryReplacerTests: XCTestCase {
     func testTemplateWorks() throws {
         let dictionary = try UserDictionary.parse(Data(UserDictionary.template.utf8))
         let replacer = DictionaryReplacer(dictionary)
-        XCTAssertEqual(replacer.apply(to: "try whisper kit and whisperkit"), "try WhisperKit and WhisperKit")
+        XCTAssertEqual(replacer.apply(to: "try hyper talk and hypertalk"), "try Hypertalk and Hypertalk")
         XCTAssertEqual(replacer.apply(to: "a post hoc check"), "a post hoc check")
         XCTAssertNil(dictionary.example(for: "en"))
     }

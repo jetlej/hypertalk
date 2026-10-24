@@ -55,18 +55,16 @@ final class OnboardingTests: XCTestCase {
         XCTAssertEqual(next.language.spoken, ["en", "fr"])
     }
 
-    func testEnglishOnlyKeepsTheModel() {
+    func testEnglishGetsTheRecommendedParakeet() {
         XCTAssertNil(Onboarding.apply(hotkey: .fn, languages: ["en"], preferred: ["en"], to: Settings()).model.id)
         var turbo = Settings()
         turbo.model.id = "whisper-large-v3-turbo"
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en"], preferred: ["en"], to: turbo).model.id, "whisper-large-v3-turbo")
+        XCTAssertNil(Onboarding.apply(hotkey: .fn, languages: ["en"], preferred: ["en"], to: turbo).model.id)
     }
 
-    func testAnotherLanguageMovesAnEnglishOnlyModelToSmall() {
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "es"], preferred: ["en"], to: Settings()).model.id, "whisper-small")
-        var turbo = Settings()
-        turbo.model.id = "whisper-large-v3-turbo"
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["es"], preferred: ["en"], to: turbo).model.id, "whisper-large-v3-turbo")
+    func testOtherLanguagesPickTheBestModelForThem() {
+        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "es"], preferred: ["en"], to: Settings()).model.id, "parakeet-tdt-v3")
+        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "ja"], preferred: ["en"], to: Settings()).model.id, "whisper-large-v3-turbo")
     }
 
     func testStartsWithTheMacsLanguages() {

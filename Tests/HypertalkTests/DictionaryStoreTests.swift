@@ -156,8 +156,8 @@ final class DictionaryParseTests: XCTestCase {
             # Words Hypertalk should spell your way. Replaces lists what it writes instead.
             # Separate the columns with two spaces or a tab.
 
-            Word          Replaces
-            WhisperKit    whisper kit
+            Word         Replaces
+            Hypertalk    hyper talk
 
             """)
     }
@@ -281,8 +281,8 @@ final class DictionaryStoreTests: XCTestCase {
         XCTAssertFalse(store.createIfMissing(), "never overwrites")
 
         let loaded = store.current().dictionary
-        XCTAssertEqual(loaded.terms, ["WhisperKit"])
-        XCTAssertEqual(loaded.replacements, [.init(from: ["whisper kit"], to: "WhisperKit")])
+        XCTAssertEqual(loaded.terms, ["Hypertalk"])
+        XCTAssertEqual(loaded.replacements, [.init(from: ["hyper talk"], to: "Hypertalk")])
         XCTAssertEqual(logs, [])
     }
 
@@ -409,5 +409,26 @@ final class DictionaryStoreTests: XCTestCase {
         XCTAssertFalse(vocabulary.contains("Vercel"))
         XCTAssertTrue(vocabulary.contains("Lejuwaan"))
         XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).hasPrefix("#"))
+    }
+}
+
+final class DictionaryEditorTests: XCTestCase {
+    func testRowsRoundTripThroughTheFile() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hypertalk-editor-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = DictionaryStore(file: dir.appendingPathComponent("dictionary"), log: { _ in })
+        let rows = [
+            DictionarySection.Entry(word: "Vercel", replaces: "Versailles, ver cell"),
+            DictionarySection.Entry(word: "Parakeet", replaces: ""),
+            DictionarySection.Entry(word: "  ", replaces: "ignored"),
+            DictionarySection.Entry(word: "A,B", replaces: "a b"),
+        ]
+        XCTAssertTrue(store.save(DictionarySection.dictionary(from: rows)))
+        let loaded = store.current().dictionary
+        XCTAssertEqual(loaded.terms, ["Vercel", "Parakeet", "A B"])
+        XCTAssertEqual(store.current().replacer.apply(to: "check ver cell"), "check Vercel")
+        let back = DictionarySection.entries(from: loaded)
+        XCTAssertEqual(back.map(\.word), ["Vercel", "Parakeet", "A B"])
+        XCTAssertEqual(back.map(\.replaces), ["Versailles, ver cell", "", "a b"])
     }
 }

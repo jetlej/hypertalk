@@ -90,14 +90,12 @@ enum Onboarding {
         next.hotkey.key = hotkey
         let mac = preferred.filter(SpokenLanguage.whisperLanguages.contains)
         next.language.spoken = Set(languages) == Set(mac) ? nil : languages
-        let current = settings.model.id.flatMap(ModelRegistry.find) ?? ModelRegistry.recommended()
-        if languages.contains(where: { $0 != "en" }), current?.isMultilingual != true {
-            next.model.id = multilingualModel
-        }
+        // The model follows the languages: Parakeet for English or Europe's
+        // 25, Whisper Large for the rest. Nil for the recommended model.
+        let best = ModelRegistry.best(for: languages)
+        next.model.id = best == ModelRegistry.recommended()?.id ? nil : best
         next.onboarding.completed = true
         return next
     }
 
-    /// The model picked when the user speaks more than English.
-    static let multilingualModel = "whisper-small"
 }

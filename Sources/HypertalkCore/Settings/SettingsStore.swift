@@ -58,13 +58,6 @@ final class SettingsStore: ObservableObject {
         write(next)
     }
 
-    /// Writes the current settings if no file exists yet, so Open Config File
-    /// has something to open.
-    func createIfMissing() {
-        guard Paths.fileType(file.path) == nil else { return }
-        try? save(current)
-    }
-
     /// Reads the file again and applies it if it changed.
     func reload() {
         if let loaded = read() { apply(loaded) }

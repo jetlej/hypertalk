@@ -205,7 +205,13 @@ struct OnboardingView: View {
                     hotkeyMenu
                 }
                 GridRow {
-                    label("Languages")
+                    VStack(alignment: .leading, spacing: 1) {
+                        label("Languages you speak")
+                        // Filled from the Mac's own languages; the model follows them.
+                        Text("Detected from your Mac")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                     Button { showsLanguages.toggle() } label: {
                         PillLabel(
                             title: Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) }),

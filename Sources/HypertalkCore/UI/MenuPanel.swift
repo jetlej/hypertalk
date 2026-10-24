@@ -38,6 +38,7 @@ final class MenuPanel: NSPanel {
     static let width: CGFloat = 290
 
     init(model: MenuPanelModel, actions: MenuPanelActions) {
+        host = NSHostingView(rootView: MenuPanelView(model: model, actions: actions))
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: Self.width, height: 300),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -53,10 +54,11 @@ final class MenuPanel: NSPanel {
         isReleasedWhenClosed = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         appearance = NSAppearance(named: .darkAqua)
-        let host = NSHostingView(rootView: MenuPanelView(model: model, actions: actions))
-        host.sizingOptions = [.preferredContentSize]
         contentView = host
     }
+
+    /// The SwiftUI content; measured on each open, since rows come and go.
+    private let host: NSHostingView<MenuPanelView>
 
     override var canBecomeKey: Bool { true }
 
@@ -74,7 +76,8 @@ final class MenuPanel: NSPanel {
     func show(below button: NSStatusBarButton) {
         guard let buttonWindow = button.window else { return }
         let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-        let size = contentView?.fittingSize ?? frame.size
+        host.layoutSubtreeIfNeeded()
+        let size = host.fittingSize
         var origin = NSPoint(x: anchor.midX - size.width / 2, y: anchor.minY - size.height - 6)
         if let visible = buttonWindow.screen?.visibleFrame {
             origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
@@ -91,15 +94,24 @@ final class MenuPanel: NSPanel {
             context.duration = 0.12
             animator().alphaValue = 1
         }
+        // A click in another app closes it, even if it never became key.
+        outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dismiss() }
+        }
     }
 
     func dismiss() {
+        if let outsideClicks {
+            NSEvent.removeMonitor(outsideClicks)
+            self.outsideClicks = nil
+        }
         guard isVisible else { return }
         button?.highlight(false)
         orderOut(nil)
     }
 
     private weak var button: NSStatusBarButton?
+    private var outsideClicks: Any?
 }
 
 /// The panel's content: the wordmark, the live status, the model, and the

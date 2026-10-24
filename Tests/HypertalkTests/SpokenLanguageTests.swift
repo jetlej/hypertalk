@@ -80,3 +80,21 @@ final class SpokenLanguageTests: XCTestCase {
         XCTAssertEqual(SpokenLanguage.displayName("pt", locale: Locale(identifier: "pt_BR")), "Português")
     }
 }
+
+final class BestModelTests: XCTestCase {
+    func testEnglishGetsParakeetV2() {
+        XCTAssertEqual(ModelRegistry.best(for: ["en"]), "parakeet-tdt-v2")
+        XCTAssertEqual(ModelRegistry.best(for: []), "parakeet-tdt-v2")
+    }
+
+    func testEuropeanLanguagesGetParakeetV3() {
+        XCTAssertEqual(ModelRegistry.best(for: ["es"]), "parakeet-tdt-v3")
+        XCTAssertEqual(ModelRegistry.best(for: ["en", "fr", "de"]), "parakeet-tdt-v3")
+        XCTAssertEqual(ModelRegistry.best(for: ["pt-BR"]), "parakeet-tdt-v3")
+    }
+
+    func testOtherLanguagesGetWhisperLarge() {
+        XCTAssertEqual(ModelRegistry.best(for: ["ja"]), "whisper-large-v3-turbo")
+        XCTAssertEqual(ModelRegistry.best(for: ["en", "zh"]), "whisper-large-v3-turbo")
+    }
+}

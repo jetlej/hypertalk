@@ -72,4 +72,20 @@ package enum ModelRegistry {
     package static func recommended() -> TranscriptionModel? {
         shared.first { $0.recommended } ?? shared.first
     }
+
+    /// The model for speaking `languages` (ISO 639-1 codes): Parakeet v2
+    /// for English alone (or nothing known), Parakeet v3 when every one is
+    /// among its 25, and Whisper Large v3 Turbo, which hears 99, for the
+    /// rest. Picked when the Language setting changes, so a language never
+    /// needs a model chosen by hand.
+    static func best(for languages: [String]) -> String {
+        let codes = Set(languages.map { $0.lowercased().split(separator: "-").first.map(String.init) ?? $0 })
+        if codes.isEmpty || codes == ["en"] { return parakeetEnglish }
+        if let v3 = find(parakeetMultilingual), codes.isSubset(of: Set(v3.languages)) { return v3.id }
+        return whisperMultilingual
+    }
+
+    static let parakeetEnglish = "parakeet-tdt-v2"
+    static let parakeetMultilingual = "parakeet-tdt-v3"
+    static let whisperMultilingual = "whisper-large-v3-turbo"
 }

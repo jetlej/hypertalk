@@ -113,6 +113,29 @@ package final class DictionaryStore: @unchecked Sendable {
         return true
     }
 
+    /// Replaces the file with `dictionary`, as the Settings editor saves
+    /// it: the preamble, the header and one row per word (`text()`).
+    /// Writes to a symlink's target, so a link into dotfiles survives.
+    /// Returns false if nothing was written (logged).
+    @discardableResult
+    func save(_ dictionary: UserDictionary) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        let dir = file.deletingLastPathComponent()
+        let target = Paths.fileType(file.path) == .typeSymbolicLink ? file.resolvingSymlinksInPath() : file
+        do {
+            if Paths.fileType(dir.path) == nil {
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            }
+            try Data(dictionary.text().text.utf8).write(to: target, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+        } catch {
+            log("couldn't save \(file.path): \(error.localizedDescription)")
+            return false
+        }
+        return true
+    }
+
     /// Removes every row whose word is `word`, ignoring case. Comments and
     /// the other rows are kept as they are. Returns true if a row went.
     @discardableResult
