@@ -72,6 +72,7 @@ enum OnboardingWindow {
             backing: .buffered, defer: false
         )
         window.contentView = hosting
+        Theme.applyAppearance(to: window)
         window.title = "Welcome to Hypertalk"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -94,7 +95,7 @@ enum OnboardingWindow {
     private static func refresh() {
         let state = PermissionState.current
         model?.update(state)
-        menuBar?.grantPermissionsItem.isHidden = state.allGranted
+        menuBar?.setPermissionsMissing(!state.allGranted)
         if state.allGranted && window == nil {
             poll?.invalidate()
             poll = nil
@@ -191,13 +192,12 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            LogoBadge()
-            Text("Hypertalk")
-                .font(.system(size: 24, weight: .semibold))
-                .padding(.top, 16)
+            LogoBadge(size: 48)
+            Wordmark(size: 64)
+                .padding(.top, 14)
             Text("Hold a key, speak, and let go.")
                 .foregroundStyle(.secondary)
-                .padding(.top, 4)
+                .padding(.top, 2)
 
             Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 12) {
                 GridRow {
@@ -247,6 +247,7 @@ struct OnboardingView: View {
         .padding(.top, 44)
         .padding(.bottom, 28)
         .frame(width: 420)
+        .background(Backdrop(glowAt: 0.14))
     }
 
     private func label(_ text: String) -> some View {

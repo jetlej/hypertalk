@@ -26,8 +26,8 @@ struct PillLabel: View {
 }
 
 /// A button drawn as a pill: `.buttonStyle(.pill)` with the light fill of a
-/// `PillLabel`, or `.buttonStyle(.primaryPill)` filled in the text color, for
-/// the one thing to do next.
+/// `PillLabel`, or `.buttonStyle(.primaryPill)` in white-to-ice with a blue
+/// glow (`Theme`), for the one thing to do next.
 struct PillButtonStyle: ButtonStyle {
     var primary = false
     @Environment(\.isEnabled) private var isEnabled
@@ -37,10 +37,19 @@ struct PillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: primary ? .semibold : .medium))
-            .foregroundStyle(primary ? Color(nsColor: .windowBackgroundColor) : Color.primary)
+            .foregroundStyle(primary ? Color.black : Color.primary)
             .padding(.horizontal, controlSize == .large ? 22 : 14)
             .padding(.vertical, controlSize == .large ? 9 : 6)
-            .background(Capsule().fill(fill(pressed: configuration.isPressed)))
+            .background {
+                if primary {
+                    Capsule()
+                        .fill(LinearGradient(colors: [.white, Color(red: 0.84, green: 0.89, blue: 1)], startPoint: .top, endPoint: .bottom))
+                        .opacity(configuration.isPressed ? 0.8 : 1)
+                        .shadow(color: Theme.blue.opacity(isEnabled ? 0.6 : 0), radius: 14, y: 4)
+                } else {
+                    Capsule().fill(fill(pressed: configuration.isPressed))
+                }
+            }
             .contentShape(Capsule())
             .opacity(isEnabled ? 1 : 0.35)
     }

@@ -37,6 +37,8 @@ final class SettingsWindow {
         window.titleVisibility = .hidden
         window.contentView = NSHostingView(rootView: SettingsView(store: store, dictionary: dictionary))
         window.isReleasedWhenClosed = false
+        Theme.applyAppearance(to: window)
+        window.isMovableByWindowBackground = true
         window.center()
         return window
     }
@@ -90,10 +92,13 @@ struct SettingsView: View {
         // Escape and ⌘W close the window: an accessory app has no menu bar
         // of its own to carry Close. Behind the page, so it takes no row.
         .background {
-            Button("Close") { NSApp.keyWindow?.performClose(nil) }
-                .keyboardShortcut("w", modifiers: .command)
-                .opacity(0)
-                .accessibilityHidden(true)
+            ZStack {
+                Backdrop(glowAt: 0.1)
+                Button("Close") { NSApp.keyWindow?.performClose(nil) }
+                    .keyboardShortcut("w", modifiers: .command)
+                    .opacity(0)
+                    .accessibilityHidden(true)
+            }
         }
         .frame(width: 460)
         .frame(minHeight: 420, idealHeight: 680)
@@ -122,15 +127,10 @@ struct SettingsGroup<Content: View>: View {
 /// The Hypertalk logo, with the title and version centered under it.
 private struct SettingsHeader: View {
     var body: some View {
-        VStack(spacing: 4) {
-            LogoBadge()
-                .padding(.bottom, 12)
-            Text("Hypertalk · Settings")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-            Text("Version \(AppBundle.version)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(spacing: 10) {
+            LogoBadge(size: 40)
+            Wordmark(size: 58)
+            MonoLabel("Settings · Version \(AppBundle.version)")
         }
         .frame(maxWidth: .infinity)
     }
