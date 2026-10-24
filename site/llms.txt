@@ -1,0 +1,29 @@
+# Hypertalk
+
+> Hypertalk is the fastest free dictation app for Mac. Hold the fn key, speak, and let go: your words are typed at the cursor in any app in about 0.1 seconds. Speech recognition runs entirely on your Mac with NVIDIA Parakeet, so it is private and works offline. Free and open source (MIT).
+
+- Download: https://github.com/jetlej/hypertalk/releases/latest/download/Hypertalk.dmg
+- Source code: https://github.com/jetlej/hypertalk
+- Requirements: macOS 14 or later on Apple Silicon (M1 or newer)
+- Price: free, no account, no subscription
+
+## How it works
+
+- Hold fn (or another key you choose), speak, release. The transcript is pasted at the cursor and your clipboard is restored.
+- Hands-free mode: double-tap fn (or set it to a single tap) to keep recording without holding the key; press it again to finish.
+- Transcription uses NVIDIA Parakeet TDT on the Apple Neural Engine via CoreML. A 7-second clip transcribes in about 0.1 s on an M3 Pro MacBook Pro. On the Hugging Face Open ASR Leaderboard, Parakeet TDT v2 is more accurate than OpenAI Whisper Large v3 on English.
+- Languages: English (Parakeet v2), 25 European languages (Parakeet v3), and 99 languages with Whisper models. Choosing a language in Settings switches to the best model for it.
+- Learns your words: when you correct a name or term right after dictating it, Hypertalk adds it to your dictionary. You can also add words and what they're misheard as in Settings.
+- Private: audio and text never leave the Mac, and nothing you say is logged.
+- Updates itself (Sparkle), signed and notarized by Apple.
+
+## Compared with other Mac dictation apps
+
+- Apple's built-in Dictation: Hypertalk is push-to-talk on a single key and learns your custom vocabulary from corrections.
+- Wispr Flow, Superwhisper, MacWhisper: Hypertalk is free and open source, needs no account, and always transcribes on the Mac.
+
+## Links
+
+- Website: https://hyper-talk.vercel.app/
+- Releases and changelog: https://github.com/jetlej/hypertalk/releases
+- README: https://github.com/jetlej/hypertalk#readme

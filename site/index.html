@@ -3,13 +3,61 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Hypertalk · Dictation for Mac</title>
-<meta name="description" content="The fastest dictation for Mac: speech to text in 0.1s. Free, local, powered by NVIDIA Parakeet." />
+<title>Hypertalk · The fastest free dictation for Mac</title>
+<meta name="description" content="Hold fn, talk, and Hypertalk types it in 0.1 seconds. Free, private dictation for Mac that runs entirely on your Mac with NVIDIA Parakeet. Learns your words and works offline." />
+<link rel="canonical" href="https://hyper-talk.vercel.app/" />
+
+<!-- Link previews: a still image, and an 8 s looping video where it's supported. -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Hypertalk · Dictation for Mac" />
-<meta property="og:description" content="Free, instant, local only." />
+<meta property="og:site_name" content="Hypertalk" />
+<meta property="og:url" content="https://hyper-talk.vercel.app/" />
+<meta property="og:title" content="Hypertalk · The fastest free dictation for Mac" />
+<meta property="og:description" content="Hold fn, talk, and it's typed in 0.1 seconds. Free, private, on-device, powered by NVIDIA Parakeet." />
+<meta property="og:image" content="https://hyper-talk.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Hypertalk: the fastest free dictation for Mac, 0.1 seconds." />
+<meta property="og:video" content="https://hyper-talk.vercel.app/og.mp4" />
+<meta property="og:video:secure_url" content="https://hyper-talk.vercel.app/og.mp4" />
+<meta property="og:video:type" content="video/mp4" />
+<meta property="og:video:width" content="1200" />
+<meta property="og:video:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Hypertalk · The fastest free dictation for Mac" />
+<meta name="twitter:description" content="Hold fn, talk, and it's typed in 0.1 seconds. Free, private, on-device, powered by NVIDIA Parakeet." />
+<meta name="twitter:image" content="https://hyper-talk.vercel.app/og.png" />
+
+<!-- What search engines and AI assistants read about the app. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Hypertalk",
+  "description": "Free push-to-talk dictation for macOS. Hold the fn key, speak, and the text is typed at the cursor in any app in about 0.1 seconds. Speech recognition runs entirely on the Mac with NVIDIA Parakeet, so nothing is sent to the cloud.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "macOS 14 or later (Apple Silicon)",
+  "softwareVersion": "0.3.2",
+  "url": "https://hyper-talk.vercel.app/",
+  "downloadUrl": "https://github.com/jetlej/hypertalk/releases/latest/download/Hypertalk.dmg",
+  "image": "https://hyper-talk.vercel.app/og.png",
+  "license": "https://github.com/jetlej/hypertalk/blob/main/LICENSE",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Push-to-talk dictation into any app",
+    "Speech to text in about 0.1 seconds",
+    "Runs on-device with NVIDIA Parakeet; works offline",
+    "Learns names and terms from your corrections",
+    "Hands-free mode: double-tap or single-tap fn",
+    "25 European languages with Parakeet v3, 99 with Whisper"
+  ],
+  "sameAs": ["https://github.com/jetlej/hypertalk"]
+}
+</script>
 <meta name="theme-color" content="#000000" />
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.5' cy='.62' r='.6'%3E%3Cstop offset='0' stop-color='%233848ff'/%3E%3Cstop offset='1' stop-color='%23000'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -160,7 +208,7 @@ h2 .time {
             Powered by <b>NVIDIA</b> Parakeet
         </span>
         <h1 class="title in d1">Hypertalk</h1>
-        <h2 class="in d2">The fastest dictation for Mac. <span class="time">0.1s.</span></h2>
+        <h2 class="in d2">The fastest free dictation for Mac. <span class="time">0.1s.</span></h2>
 
         <a class="download in d4" href="https://github.com/jetlej/hypertalk/releases/latest/download/Hypertalk.dmg">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.37 12.68c-.02-2.22 1.82-3.29 1.9-3.34-1.04-1.52-2.65-1.72-3.22-1.75-1.37-.14-2.68.81-3.37.81-.7 0-1.77-.79-2.91-.77-1.5.02-2.88.87-3.65 2.21-1.56 2.7-.4 6.69 1.12 8.88.74 1.07 1.62 2.27 2.78 2.23 1.12-.05 1.54-.72 2.89-.72 1.35 0 1.73.72 2.91.7 1.2-.02 1.96-1.09 2.69-2.17.85-1.24 1.2-2.44 1.22-2.5-.03-.01-2.33-.9-2.36-3.58ZM14.15 6.16c.61-.75 1.03-1.78.91-2.82-.88.04-1.96.59-2.6 1.33-.56.65-1.06 1.71-.93 2.72.99.08 2-.5 2.62-1.23Z"/></svg>

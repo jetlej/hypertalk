@@ -1,0 +1,5 @@
+# Generated: snapshots, check reports, render caches.
+snaps/
+renders/
+.hyperframes/
+node_modules/
