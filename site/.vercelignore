@@ -1,0 +1,5 @@
+# Left from Parrot and not used by this page: a Parrot installer and its preview image.
+install.sh
+og.png
+# Vercel CLI credentials, never published.
+.env*
