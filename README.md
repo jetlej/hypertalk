@@ -68,3 +68,5 @@ scripts/release.sh 0.3.1    # build, notarize, sign the update, publish the GitH
 ## 7. License
 
 [MIT](LICENSE)
+
+Icon: "ripple" by Zach Bogart from [Noun Project](https://thenounproject.com/icon/ripple-2664514/) (CC BY 3.0).
