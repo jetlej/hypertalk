@@ -56,12 +56,16 @@ final class SettingsWindow {
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
     let dictionary: DictionaryStore
+    @ObservedObject private var menuBar = MenuBarStatus.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 SettingsHeader()
                     .padding(.bottom, 8)
+                if menuBar.iconHidden {
+                    HiddenIconBanner()
+                }
                 Divider()
                 SettingsGroup("General") {
                     HotkeyRow(store: store)
@@ -157,5 +161,29 @@ private struct LaunchAtLoginRow: View {
             Text("Launch at login is available when Hypertalk runs from Hypertalk.app.")
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+/// Shown while macOS keeps the menu-bar icon out of sight: why, and the way
+/// back.
+private struct HiddenIconBanner: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(Color(red: 1, green: 0.72, blue: 0.2))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your menu bar is full, so macOS hid Hypertalk's icon.")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Hold ⌘ and drag other icons off the menu bar to make room. Dictation still works, and opening Hypertalk again from Applications always brings you here.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(0.12)))
     }
 }

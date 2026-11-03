@@ -11,6 +11,8 @@ struct HotkeySettings: Codable, Equatable {
     /// The tap that keeps recording without holding the key; the next press
     /// stops and transcribes. An unknown name decodes to the default.
     var lockMode: LockMode = .doubleTap
+    /// A recorded shortcut used instead of `key`, or nil for `key`.
+    var custom: CustomHotkey?
 
     init() {}
 
@@ -20,7 +22,72 @@ struct HotkeySettings: Codable, Equatable {
         key = name.flatMap(HotkeyKey.init(rawValue:)) ?? .fn
         let lock = try c.decodeIfPresent(String.self, forKey: .lockMode)
         lockMode = lock.flatMap(LockMode.init(rawValue:)) ?? .doubleTap
+        // An unreadable shortcut falls back to `key`.
+        custom = try? c.decodeIfPresent(CustomHotkey.self, forKey: .custom)
     }
+
+    /// The short name in use: "right ⌥", or a custom shortcut's "⌃ ⌥ Space".
+    var shortName: String { custom?.label ?? key.shortName }
+
+    /// What the monitor listens for.
+    var trigger: HotkeyTrigger { custom?.trigger ?? .key(key) }
+}
+
+/// A shortcut recorded in place of one of the `HotkeyKey`s: a key with
+/// modifiers, such as ⌃⌥Space, or modifiers held together, such as ⌃⌥.
+struct CustomHotkey: Codable, Equatable, Sendable {
+    /// One modifier, by its name in `settings.json`.
+    enum Modifier: String, Codable, CaseIterable, Sendable {
+        case fn, control, option, shift, command
+
+        var glyph: String {
+            switch self {
+            case .fn: return "fn"
+            case .control: return "⌃"
+            case .option: return "⌥"
+            case .shift: return "⇧"
+            case .command: return "⌘"
+            }
+        }
+
+        var flag: CGEventFlags {
+            switch self {
+            case .fn: return .maskSecondaryFn
+            case .control: return .maskControl
+            case .option: return .maskAlternate
+            case .shift: return .maskShift
+            case .command: return .maskCommand
+            }
+        }
+    }
+
+    /// The virtual keycode pressed with the modifiers; nil for modifiers alone.
+    var keyCode: Int?
+    var modifiers: Set<Modifier>
+    /// How the key was labeled when recorded: "Space", "D", "F5".
+    var keyName: String?
+
+    /// "⌃ ⌥ Space", with the modifiers in the order macOS menus show them.
+    var label: String {
+        (Modifier.allCases.filter(modifiers.contains).map(\.glyph) + [keyName].compactMap { $0 })
+            .joined(separator: " ")
+    }
+
+    var trigger: HotkeyTrigger {
+        let flags = modifiers.reduce(into: CGEventFlags()) { $0.insert($1.flag) }
+        if let keyCode { return .combo(keyCode: UInt32(keyCode), modifiers: flags) }
+        return .chord(flags)
+    }
+}
+
+/// What starts and stops a dictation.
+enum HotkeyTrigger: Equatable {
+    /// One modifier key, matched by its keycode (ADR-003).
+    case key(HotkeyKey)
+    /// Modifiers held together, matched by their flags.
+    case chord(CGEventFlags)
+    /// A key with modifiers, registered with macOS (`CarbonHotKey`).
+    case combo(keyCode: UInt32, modifiers: CGEventFlags)
 }
 
 /// The modifiers Hypertalk can use as its push-to-talk key (ADR-003). The raw

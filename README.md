@@ -21,7 +21,7 @@ Requires macOS 14+ on Apple Silicon. Turn on Hypertalk when macOS asks for Acces
 
 1. Click into any text field.
 2. Hold `fn` and speak. A small pill at the bottom of the screen shows the mic is live. On a keyboard where `fn` does nothing (Logitech and most third-party keyboards), choose another key under **Hotkey** in **Settings…**: left or right Option, Command, Control, or Shift. The change applies from the next press.
-3. Release. The transcript is pasted at the cursor, usually within 200–300 ms, and your clipboard is restored.
+3. Release. The transcript is pasted at the cursor, usually within 200–300 ms, and stays on your clipboard in case it landed somewhere you didn't mean.
 
 **Hands-free:** double-tap the hotkey and let go; Hypertalk keeps listening (the pill shows a padlock) until you press the key again. Under **Hands-free** in Settings, choose **Single tap** to lock with one tap instead, or **Off**.
 
@@ -51,7 +51,7 @@ Hypertalk also learns words on its own: when you fix a name or term right after 
 | `hypertalk --model whisper-large-v3-turbo` | Larger, multilingual model |
 | `hypertalk --hotkey right-option` | Use another key for this run only; Settings… changes the saved key |
 | `hypertalk --no-overlay` | Hide the recording pill |
-| `hypertalk --inject-mode type-unicode` | Type instead of paste (leaves the clipboard alone) |
+| `hypertalk --inject-mode type-unicode` | Type instead of paste |
 
 ## 5. How it works
 

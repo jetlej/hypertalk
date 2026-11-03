@@ -1,9 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// The onboarding window (#51): one page with the hotkey, the languages the
-/// user speaks, and both permissions, each with its own Allow button, so
-/// macOS never asks before the window has said why. Hypertalk.app opens it at
+/// The onboarding window (#51): one decision per page, the talk key,
+/// hands-free, the languages the user speaks, then both permissions, each
+/// with its own Allow button, so macOS never asks before the window has said
+/// why (`OnboardingView`). Hypertalk.app opens it at
 /// launch until the user has been through it once (Get Started or closing
 /// it), and afterwards while a grant is missing. "Grant Permissions…" in the
 /// menu bar reopens it while one is. One instance, reused.
@@ -19,6 +20,10 @@ enum OnboardingWindow {
     private static var model: OnboardingModel?
     private static var poll: Timer?
     private static let delegate = Delegate()
+    /// Called after the window closes, by Get Started or by the person.
+    static var onClosed: (() -> Void)?
+    /// Whether the window is open.
+    static var isShowing: Bool { window != nil }
 
     /// Opens the window if this is Hypertalk.app and `Onboarding.showsWindow`
     /// says so, and keeps "Grant Permissions…" shown while a grant is
@@ -55,13 +60,17 @@ enum OnboardingWindow {
         let model = OnboardingModel(settings: store.current)
         model.onGetStarted = { [weak store] in
             guard let store else { return }
-            store.write(Onboarding.apply(
-                hotkey: model.hotkey,
-                languages: model.languages,
-                preferred: model.preferred,
-                to: store.current
-            ))
-            Log.info("onboarding done: hold \(model.hotkey.shortName); languages \(model.languages.joined(separator: ", "))")
+            if !model.permissionsOnly {
+                store.write(Onboarding.apply(
+                    hotkey: model.hotkey,
+                    custom: model.custom,
+                    lockMode: model.lockMode,
+                    languages: model.languages,
+                    preferred: model.preferred,
+                    to: store.current
+                ))
+                Log.info("onboarding done: hold \(model.hotkeyName); hands-free \(model.lockMode.rawValue); languages \(model.languages.joined(separator: ", "))")
+            }
             self.window?.close()
         }
         self.model = model
@@ -117,6 +126,7 @@ enum OnboardingWindow {
         window = nil
         model = nil
         refresh()
+        onClosed?()
     }
 
     private final class Delegate: NSObject, NSWindowDelegate {
@@ -133,26 +143,52 @@ enum OnboardingWindow {
     }
 }
 
-/// The choices on the page, the grants, and the Allow and Get Started actions.
+/// The onboarding pages, one decision each, in order.
+enum OnboardingStep: Int, CaseIterable {
+    case hotkey, handsFree, languages, permissions
+}
+
+/// The page shown, the choices on the pages, the grants, and the Allow,
+/// Back, Continue and Get Started actions.
 @MainActor
 final class OnboardingModel: ObservableObject {
     @Published private(set) var state = PermissionState.current
+    @Published private(set) var step: OnboardingStep
     @Published var hotkey: HotkeyKey
+    @Published var lockMode: LockMode
+    /// A recorded shortcut picked in place of `hotkey`.
+    @Published var custom: CustomHotkey?
     /// Ticked languages as codes, in the order ticked.
     @Published private(set) var languages: [String]
 
-    let hotkeyChoices: [HotkeyKey]
     let preferred: [String]
+    /// Reopened after onboarding only because a grant went missing: just the
+    /// permissions page, and Get Started saves nothing.
+    let permissionsOnly: Bool
     var onGetStarted: (() -> Void)?
 
     init(settings: Settings, preferred: [String] = SpokenLanguage.preferredCodes()) {
         hotkey = settings.hotkey.key
-        hotkeyChoices = Onboarding.hotkeyChoices(current: settings.hotkey.key)
+        lockMode = settings.hotkey.lockMode
+        custom = settings.hotkey.custom
         self.preferred = preferred
         languages = Onboarding.initialLanguages(saved: settings.language.spoken, preferred: preferred)
+        permissionsOnly = settings.onboarding.completed
+        step = permissionsOnly ? .permissions : .hotkey
     }
 
-    var canGetStarted: Bool { state.allGranted && !languages.isEmpty }
+    var canContinue: Bool {
+        switch step {
+        case .hotkey, .handsFree: return true
+        case .languages: return !languages.isEmpty
+        case .permissions: return state.allGranted
+        }
+    }
+
+    /// "right ⌥", or a custom shortcut's "⌃ ⌥ Space".
+    var hotkeyName: String { custom?.label ?? hotkey.shortName }
+
+    var canGoBack: Bool { !permissionsOnly && step != .hotkey }
 
     func update(_ now: PermissionState) {
         if now != state { state = now }
@@ -181,116 +217,18 @@ final class OnboardingModel: ObservableObject {
         steps.forEach(Permissions.perform)
     }
 
-    func getStarted() { onGetStarted?() }
-}
-
-/// The page: the logo in a circle, the name, the hotkey and languages as
-/// pills (`Pill.swift`), the two permissions, and Get Started.
-struct OnboardingView: View {
-    @ObservedObject var model: OnboardingModel
-    @State private var showsLanguages = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            LogoBadge(size: 48)
-            Wordmark(size: 64)
-                .padding(.top, 14)
-            Text("Hold a key, speak, and let go.")
-                .foregroundStyle(.secondary)
-                .padding(.top, 2)
-
-            Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 12) {
-                GridRow {
-                    label("Hotkey")
-                    hotkeyMenu
-                }
-                GridRow {
-                    VStack(alignment: .leading, spacing: 1) {
-                        label("Languages you speak")
-                        // Filled from the Mac's own languages; the model follows them.
-                        Text("Detected from your Mac")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    Button { showsLanguages.toggle() } label: {
-                        PillLabel(
-                            title: Onboarding.summary(model.languages.map { SpokenLanguage.displayName($0) }),
-                            chevron: true
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showsLanguages, arrowEdge: .bottom) {
-                        OnboardingLanguages(model: model)
-                    }
-                }
-                GridRow {
-                    label("Microphone")
-                    permission(.microphone, granted: model.state.microphone == .granted,
-                               action: model.state.microphone == .denied ? "Open Settings" : "Allow")
-                }
-                .padding(.top, 8)
-                GridRow {
-                    label("Accessibility")
-                    permission(.accessibility, granted: model.state.accessibility, action: "Allow")
-                }
-            }
-            .fixedSize()
-            .padding(.top, 32)
-
-            Button("Get Started") { model.getStarted() }
-                .buttonStyle(PillButtonStyle(primary: true))
-                .controlSize(.large)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.canGetStarted)
-                .padding(.top, 32)
-
-            Label("Audio and text never leave your Mac.", systemImage: "lock.fill")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 14)
-        }
-        .padding(.horizontal, 40)
-        .padding(.top, 44)
-        .padding(.bottom, 28)
-        .frame(width: 420)
-        .background(Backdrop(glowAt: 0.14))
-    }
-
-    private func label(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary)
-    }
-
-    private var hotkeyMenu: some View {
-        PillMenu(title: model.hotkey.displayName) {
-            ForEach(model.hotkeyChoices, id: \.self) { key in
-                Toggle(key.displayName, isOn: Binding(
-                    get: { model.hotkey == key },
-                    set: { if $0 { model.hotkey = key } }
-                ))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func permission(_ kind: Permissions.Kind, granted: Bool, action: String) -> some View {
-        if granted {
-            Label("Allowed", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.multicolor)
-                .padding(.vertical, 6)
+    /// The next page, or Get Started on the last.
+    func next() {
+        guard canContinue else { return }
+        if let following = OnboardingStep(rawValue: step.rawValue + 1) {
+            step = following
         } else {
-            Button(action) { model.allow(kind) }
-                // Filled, so the missing grants read as what to do next.
-                .buttonStyle(.primaryPill)
+            onGetStarted?()
         }
     }
-}
 
-/// The Languages popover, observing the model so ticks show as they change.
-private struct OnboardingLanguages: View {
-    @ObservedObject var model: OnboardingModel
-
-    var body: some View {
-        LanguageChecklist(ticked: model.languages, toggle: model.toggle)
+    func back() {
+        guard canGoBack, let previous = OnboardingStep(rawValue: step.rawValue - 1) else { return }
+        step = previous
     }
 }

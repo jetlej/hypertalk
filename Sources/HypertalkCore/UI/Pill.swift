@@ -43,7 +43,7 @@ struct PillButtonStyle: ButtonStyle {
             .background {
                 if primary {
                     Capsule()
-                        .fill(LinearGradient(colors: [.white, Color(red: 0.84, green: 0.89, blue: 1)], startPoint: .top, endPoint: .bottom))
+                        .fill(Theme.whiteFill)
                         .opacity(configuration.isPressed ? 0.8 : 1)
                         .shadow(color: Theme.blue.opacity(isEnabled ? 0.6 : 0), radius: 14, y: 4)
                 } else {

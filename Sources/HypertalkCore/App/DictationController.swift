@@ -14,7 +14,8 @@ import Foundation
 ///   with the capture error; the state does not change.
 /// - A release always stops capture and notifies `dictationTranscribing`,
 ///   even with nothing recorded; an empty capture then fails with
-///   `DictationError.noAudio`.
+///   `DictationError.noAudio`, and one shorter than `minimumCapture` is
+///   discarded with `DictationError.cancelled`.
 /// - A transcript that does not reach the cursor (a secure field, or focus
 ///   moved since the press) fails with its `DeliveryError`.
 @MainActor
@@ -26,6 +27,16 @@ final class DictationController {
     }
 
     private(set) var state: State = .idle
+
+    /// Captures shorter than this are discarded, not transcribed: opened and
+    /// closed too fast to hold a word, and on near-silence the models invent
+    /// "mm-hmm" or "yeah".
+    static let minimumCapture: TimeInterval = 0.6
+
+    /// Whether a capture of `seconds` is too short to transcribe.
+    static func isTooShort(_ seconds: TimeInterval) -> Bool {
+        seconds < minimumCapture
+    }
 
     private let capture: AudioCapture
     /// Replaced by `replaceTranscriber` when the model changes (#43).
@@ -127,6 +138,13 @@ final class DictationController {
         guard !samples.isEmpty else {
             settle()
             observers.forEach { $0.dictationFailed(DictationError.noAudio) }
+            return
+        }
+
+        guard !Self.isTooShort(seconds) else {
+            settle()
+            Log.info("○ discarded: too short to hold a word")
+            observers.forEach { $0.dictationFailed(DictationError.cancelled) }
             return
         }
 

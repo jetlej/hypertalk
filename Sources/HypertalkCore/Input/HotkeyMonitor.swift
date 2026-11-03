@@ -4,9 +4,13 @@ import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
 
-/// Watches a single modifier key (default: fn) and emits dictation edges.
-/// Requires Accessibility permission. If the tap fails to register, callers
-/// will see an error from `start()`.
+/// Watches the hotkey (default: fn) and emits dictation edges. Requires
+/// Accessibility permission. If the tap fails to register, callers will see
+/// an error from `start()`.
+///
+/// The hotkey is a `HotkeyTrigger`: one modifier key or modifiers held
+/// together, both seen by the `flagsChanged` tap, or a key with modifiers,
+/// which macOS reports through `CarbonHotKey` instead.
 ///
 /// Side-specific keys are matched by the keycode on each `flagsChanged`
 /// event, because left and right share one `CGEventFlags` bit and the
@@ -37,8 +41,11 @@ final class HotkeyMonitor {
     /// How often the watchdog checks that the tap is still enabled.
     static let watchdogInterval: TimeInterval = 5
 
-    /// The modifier held to dictate. Change it with `setKey(_:)`.
-    private(set) var key: HotkeyKey
+    /// What is held to dictate. Change it with `setTrigger(_:)`.
+    private(set) var trigger: HotkeyTrigger
+    private var carbon: CarbonHotKey?
+    /// Set while a new shortcut is recorded (`setPaused(_:)`).
+    private var isPaused = false
     private let debug: Bool
     private var onEvent: ((Event) -> Void)?
     private var tap: CFMachPort?
@@ -57,18 +64,48 @@ final class HotkeyMonitor {
         }
     }
 
-    init(key: HotkeyKey = .fn, debug: Bool = false) {
-        self.key = key
+    init(trigger: HotkeyTrigger = .key(.fn), debug: Bool = false) {
+        self.trigger = trigger
         self.debug = debug
     }
 
-    /// Switch to another key without recreating the tap; the next press of
-    /// `newKey` records. A recording in progress on the old key is cancelled.
-    func setKey(_ newKey: HotkeyKey) {
-        guard newKey != key else { return }
+    /// Switch to another hotkey without recreating the tap; the next press
+    /// of `newTrigger` records. A recording in progress on the old one is
+    /// cancelled.
+    func setTrigger(_ newTrigger: HotkeyTrigger) {
+        guard newTrigger != trigger else { return }
         let action = gesture.reset()
-        key = newKey
+        trigger = newTrigger
+        if onEvent != nil { registerCombo() }
         if let action { emit(action) }
+    }
+
+    /// Ignores the hotkey, and releases a combo's registration, while the
+    /// user records a new shortcut; a recording in progress is cancelled.
+    func setPaused(_ paused: Bool) {
+        guard paused != isPaused else { return }
+        isPaused = paused
+        let action = gesture.reset()
+        if paused {
+            carbon = nil
+        } else if onEvent != nil {
+            registerCombo()
+        }
+        if let action { emit(action) }
+    }
+
+    /// Registers the combo with macOS when the trigger is one, and drops
+    /// any earlier registration.
+    private func registerCombo() {
+        carbon = nil
+        guard !isPaused, case .combo(let keyCode, let modifiers) = trigger else { return }
+        carbon = CarbonHotKey(
+            keyCode: keyCode,
+            modifiers: modifiers,
+            onPress: { [weak self] in self?.feed(.hotkeyDown(othersHeld: false)) },
+            onRelease: { [weak self] in self?.feed(.hotkeyUp) }
+        )
+        if carbon == nil { Log.warning("hotkey: macOS refused the shortcut; another app may be using it") }
     }
 
     /// Changes which tap locks a recording on. A locked recording in
@@ -119,6 +156,7 @@ final class HotkeyMonitor {
 
         self.tap = tap
         self.runLoopSource = source
+        registerCombo()
 
         let watchdog = Timer(timeInterval: Self.watchdogInterval, repeats: true) { [weak self] _ in
             self?.checkTap()
@@ -140,17 +178,25 @@ final class HotkeyMonitor {
         }
         tap = nil
         runLoopSource = nil
+        carbon = nil
         onEvent = nil
     }
 
     fileprivate func handle(event: CGEvent) {
+        guard !isPaused else { return }
         let flags = event.flags
         // flagsChanged carries the modifier's keycode, never a character.
         let keycode = event.getIntegerValueField(.keyboardEventKeycode)
         if debug {
             Log.info("  [debug] modifier keycode=\(keycode) flags=\(String(flags.rawValue, radix: 16))")
         }
-        guard let input = Self.input(keycode: keycode, flags: flags, key: key, held: gesture.isHeld) else { return }
+        let input: Gesture.Input?
+        switch trigger {
+        case .key(let key): input = Self.input(keycode: keycode, flags: flags, key: key, held: gesture.isHeld)
+        case .chord(let chord): input = Self.input(keycode: keycode, flags: flags, chord: chord, held: gesture.isHeld)
+        case .combo: input = nil
+        }
+        guard let input else { return }
         feed(input)
     }
 
@@ -197,6 +243,21 @@ final class HotkeyMonitor {
         guard flagSet, key == .fn || keycode == key.keycode else { return nil }
         let others = flags.intersection(chordFlags).subtracting(key.flag)
         return .hotkeyDown(othersHeld: !others.isEmpty)
+    }
+
+    /// What one `flagsChanged` event means for a chord, such as ⌃⌥, given
+    /// whether it is already held. Down when every modifier in it is down;
+    /// up as soon as one is let go. Another modifier with it is a chord of
+    /// its own, as with a single key.
+    static func input(keycode: Int64, flags: CGEventFlags, chord: CGEventFlags, held: Bool) -> Gesture.Input? {
+        let down = flags.intersection(chordFlags.union(.maskSecondaryFn))
+        if held {
+            if !down.isSuperset(of: chord) { return .hotkeyUp }
+            if down != chord, modifierKeycodes.contains(keycode) { return .otherModifier }
+            return nil
+        }
+        guard down.isSuperset(of: chord), modifierKeycodes.contains(keycode) else { return nil }
+        return .hotkeyDown(othersHeld: down != chord)
     }
 
     // MARK: - Recovery
@@ -253,7 +314,13 @@ final class HotkeyMonitor {
 
     /// While the tap was off, the hotkey may have been released unseen.
     private func resync() {
-        let held = CGEventSource.flagsState(.combinedSessionState).contains(key.flag)
+        let flags = CGEventSource.flagsState(.combinedSessionState)
+        let held: Bool
+        switch trigger {
+        case .key(let key): held = flags.contains(key.flag)
+        case .chord(let chord): held = flags.isSuperset(of: chord)
+        case .combo: return
+        }
         guard Self.resyncEvent(wasPressed: gesture.isHeld, heldNow: held) != nil else { return }
         feed(.hotkeyUp)
     }

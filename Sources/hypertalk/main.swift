@@ -37,7 +37,7 @@ struct Run: ParsableCommand {
 
     @Option(
         name: .long,
-        help: "How text is inserted for this run only, overriding Settings: paste (borrows the clipboard and restores it) or type-unicode.",
+        help: "How text is inserted for this run only, overriding Settings: paste or type-unicode. Either way the transcript stays on the clipboard.",
         transform: { raw in
             guard let mode = InjectMode(rawValue: raw) else {
                 throw ValidationError("expected one of: \(InjectMode.allCases.map(\.rawValue).joined(separator: ", "))")

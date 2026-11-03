@@ -6,8 +6,7 @@ import Foundation
 ///
 /// Paste works in every app that supports paste, including the terminals and
 /// Electron editors that ignore `type-unicode` and drop its text with no
-/// error. It borrows the clipboard for `TextInjector.settleDelay` and always
-/// restores it. `type-unicode` leaves the clipboard alone.
+/// error. Either way the transcript is left on the clipboard afterwards.
 public enum InjectMode: String, Codable, CaseIterable, Sendable {
     case paste
     case typeUnicode = "type-unicode"
@@ -15,7 +14,8 @@ public enum InjectMode: String, Codable, CaseIterable, Sendable {
 
 /// Inserts text at the current cursor location by synthesizing keyboard
 /// events: ⌘V over the clipboard (`.paste`) or Unicode key events
-/// (`.typeUnicode`).
+/// (`.typeUnicode`). The transcript stays on the clipboard after either, so
+/// one that lands in the wrong place, or nowhere, can still be pasted.
 ///
 /// Every event comes from a private `CGEventSource` with its flags set
 /// explicitly. An event with a nil source inherits the modifiers the user is
@@ -34,9 +34,6 @@ final class TextInjector {
     /// other tools install. Neither has a reason we can verify.
     static let postLocation: CGEventTapLocation = .cgSessionEventTap
 
-    /// How long the target app gets to read the clipboard before it is restored.
-    static let settleDelay: TimeInterval = 0.25
-
     /// Virtual keycode for V on ANSI layouts (kVK_ANSI_V).
     private static let keycodeV: CGKeyCode = 9
 
@@ -48,19 +45,18 @@ final class TextInjector {
 
     init(mode: InjectMode, pasteboard: NSPasteboard = .general) {
         self.mode = mode
-        self.clipboard = PasteboardSession(
-            pasteboard: SystemPasteboard(pasteboard),
-            settleDelay: Self.settleDelay,
-            postPaste: Self.postCommandV
-        )
+        self.clipboard = PasteboardSession(pasteboard: SystemPasteboard(pasteboard), postPaste: Self.postCommandV)
     }
 
-    /// Inserts `text` at the cursor.
+    /// Inserts `text` at the cursor and leaves it on the clipboard.
     func inject(_ text: String) {
         guard !text.isEmpty else { return }
         switch mode {
-        case .paste: clipboard.paste(text)
-        case .typeUnicode: Self.typeUnicode(text)
+        case .paste:
+            clipboard.paste(text)
+        case .typeUnicode:
+            Self.typeUnicode(text)
+            clipboard.copy(text)
         }
     }
 
@@ -111,102 +107,37 @@ final class TextInjector {
 
 // MARK: - Clipboard
 
-/// One representation of one pasteboard item.
-struct PasteboardRepresentation: Equatable {
-    var type: String
-    var data: Data
-}
-
-/// Every representation of every item on a pasteboard, so text, images and
-/// copied Finder files all come back.
-struct PasteboardSnapshot: Equatable {
-    var items: [[PasteboardRepresentation]]
-}
-
-/// The pasteboard operations paste mode needs. `NSPasteboard` in the app,
-/// a fake in tests.
+/// The pasteboard write paste mode needs. `NSPasteboard` in the app, a fake
+/// in tests.
 protocol PasteboardAccess: AnyObject {
-    var changeCount: Int { get }
-    func snapshot() -> PasteboardSnapshot
-    func restore(_ snapshot: PasteboardSnapshot)
     /// Replaces the contents with `text`, plus an empty item of each marker type.
     func write(_ text: String, markers: [String])
 }
 
-/// Borrows the clipboard for a paste and gives it back.
-///
-/// `paste` saves the clipboard, writes the text, posts ⌘V and restores the
-/// saved clipboard after the settle delay. A second paste before that
-/// restore keeps the first snapshot, so the user's own clipboard comes back,
-/// not an earlier transcript. If anything else writes the clipboard during
-/// the window, that write wins and nothing is restored over it.
+/// Puts every transcript on the clipboard to stay, pasted or not, so a
+/// dictation that lands in the wrong place, or nowhere, is never lost.
 final class PasteboardSession {
-    /// nspasteboard.org markers: clipboard managers skip these items.
-    static let transientMarkers = ["org.nspasteboard.TransientType", "org.nspasteboard.ConcealedType"]
-    /// A clipboard fallback is meant to stay, but is still kept out of history.
+    /// nspasteboard.org marker: clipboard managers keep the item out of
+    /// their history.
     static let concealedMarkers = ["org.nspasteboard.ConcealedType"]
 
-    typealias Schedule = (TimeInterval, @escaping () -> Void) -> Void
-
     private let pasteboard: PasteboardAccess
-    private let settleDelay: TimeInterval
     private let postPaste: () -> Void
-    private let schedule: Schedule
 
-    /// The user's clipboard while a restore is pending.
-    private var saved: PasteboardSnapshot?
-    /// The change count right after our last write.
-    private var ourChangeCount = 0
-    /// Bumped on every write; only the latest scheduled restore runs.
-    private var generation = 0
-
-    init(
-        pasteboard: PasteboardAccess,
-        settleDelay: TimeInterval,
-        postPaste: @escaping () -> Void,
-        schedule: @escaping Schedule = { delay, work in
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
-        }
-    ) {
+    init(pasteboard: PasteboardAccess, postPaste: @escaping () -> Void) {
         self.pasteboard = pasteboard
-        self.settleDelay = settleDelay
         self.postPaste = postPaste
-        self.schedule = schedule
     }
 
-    var isRestorePending: Bool { saved != nil }
-
+    /// Puts `text` on the clipboard and pastes it.
     func paste(_ text: String) {
-        if saved == nil {
-            saved = pasteboard.snapshot()
-        }
-        pasteboard.write(text, markers: Self.transientMarkers)
-        ourChangeCount = pasteboard.changeCount
+        copy(text)
         postPaste()
-        generation += 1
-        let current = generation
-        schedule(settleDelay) { [weak self] in
-            self?.restore(ifGeneration: current)
-        }
     }
 
-    /// Puts `text` on the clipboard to stay. Drops any pending restore, which
-    /// would otherwise overwrite it.
+    /// Puts `text` on the clipboard.
     func copy(_ text: String) {
-        saved = nil
-        generation += 1
         pasteboard.write(text, markers: Self.concealedMarkers)
-        ourChangeCount = pasteboard.changeCount
-    }
-
-    private func restore(ifGeneration expected: Int) {
-        guard expected == generation, let snapshot = saved else { return }
-        saved = nil
-        guard pasteboard.changeCount == ourChangeCount else {
-            Log.info("  clipboard changed during paste; not restoring")
-            return
-        }
-        pasteboard.restore(snapshot)
     }
 }
 
@@ -216,31 +147,6 @@ final class SystemPasteboard: PasteboardAccess {
 
     init(_ pasteboard: NSPasteboard) {
         self.pasteboard = pasteboard
-    }
-
-    var changeCount: Int { pasteboard.changeCount }
-
-    func snapshot() -> PasteboardSnapshot {
-        let items = (pasteboard.pasteboardItems ?? []).map { item in
-            item.types.compactMap { type in
-                item.data(forType: type).map { PasteboardRepresentation(type: type.rawValue, data: $0) }
-            }
-        }
-        return PasteboardSnapshot(items: items)
-    }
-
-    func restore(_ snapshot: PasteboardSnapshot) {
-        pasteboard.clearContents()
-        let items = snapshot.items.map { representations -> NSPasteboardItem in
-            let item = NSPasteboardItem()
-            for representation in representations {
-                item.setData(representation.data, forType: NSPasteboard.PasteboardType(representation.type))
-            }
-            return item
-        }
-        if !items.isEmpty {
-            pasteboard.writeObjects(items)
-        }
     }
 
     func write(_ text: String, markers: [String]) {

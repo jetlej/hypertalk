@@ -90,7 +90,9 @@ public enum Daemon {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
-        let monitor = HotkeyMonitor(key: options.hotkey ?? settings.current.hotkey.key, debug: options.debugHotkey)
+        let monitor = HotkeyMonitor(trigger: options.hotkey.map(HotkeyTrigger.key) ?? settings.current.hotkey.trigger, debug: options.debugHotkey)
+        // --hotkey wins over a saved custom shortcut for this run.
+        let hotkeyName = options.hotkey?.shortName ?? settings.current.hotkey.shortName
         monitor.setLockMode(settings.current.hotkey.lockMode)
         let capture = AudioCapture(mode: options.captureMode)
         let overlay: RecordingOverlay? = options.noOverlay ? nil : RecordingOverlay()
@@ -106,7 +108,16 @@ public enum Daemon {
         let dictionary = DictionaryStore()
         let settingsWindow = SettingsWindow(store: settings, dictionary: dictionary)
         menuBar.onOpenSettings = { settingsWindow.show() }
-        menuBar.setHotkey(monitor.key)
+        // Opening Hypertalk again shows Settings, and so does a menu-bar icon
+        // that macOS hid: either way there is a way in without the icon.
+        AppDelegate.install { settingsWindow.show() }
+        menuBar.onIconHidden = {
+            if !OnboardingWindow.isShowing { settingsWindow.show() }
+        }
+        // After the menu bar has laid out, and again once setup closes.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { menuBar.checkIconVisibility() }
+        OnboardingWindow.onClosed = { menuBar.checkIconVisibility() }
+        menuBar.setHotkey(hotkeyName)
         // Hypertalk.app sets up the hotkey, languages and permissions, and
         // explains each permission before macOS asks (#51).
         OnboardingWindow.startIfNeeded(store: settings, menuBar: menuBar)
@@ -180,14 +191,14 @@ public enum Daemon {
                 }
                 Log.info("output: \(new.output.injectMode.rawValue) · paste on focus change \(new.output.pasteWhenFocusChanges ? "on" : "off") · pill \(new.output.showOverlay ? "on" : "off")")
             }
-            if old.hotkey.key != new.hotkey.key {
-                if options.hotkey != nil {
-                    Log.info("hotkey: \(new.hotkey.key.rawValue) saved; --hotkey \(monitor.key.rawValue) stays in effect for this run")
+            if old.hotkey.trigger != new.hotkey.trigger {
+                if let forced = options.hotkey {
+                    Log.info("hotkey: \(new.hotkey.shortName) saved; --hotkey \(forced.rawValue) stays in effect for this run")
                 } else {
-                    // The tap stays; it matches the new key from the next event.
-                    monitor.setKey(new.hotkey.key)
-                    menuBar.setHotkey(new.hotkey.key)
-                    Log.info("hotkey: \(new.hotkey.key.rawValue); hold \(new.hotkey.key.shortName) to dictate")
+                    // The tap stays; it matches the new hotkey from the next event.
+                    monitor.setTrigger(new.hotkey.trigger)
+                    menuBar.setHotkey(new.hotkey.shortName)
+                    Log.info("hotkey: hold \(new.hotkey.shortName) to dictate")
                 }
             }
             if old.model != new.model {
@@ -199,6 +210,12 @@ public enum Daemon {
             }
         }
         settings.startWatching()
+
+        // Recording a new shortcut, in onboarding or Settings, pauses the old one.
+        NotificationCenter.default.addObserver(forName: .shortcutRecording, object: nil, queue: .main) { note in
+            let active = note.userInfo?["active"] as? Bool ?? false
+            MainActor.assumeIsolated { monitor.setPaused(active) }
+        }
 
         // HotkeyMonitor reports health on the main thread.
         monitor.onHealthChange = { health in
@@ -225,7 +242,7 @@ public enum Daemon {
                 }
             }
             do {
-                try startHotkey(monitor, menuBar: menuBar) { event in
+                try startHotkey(monitor, name: hotkeyName, menuBar: menuBar) { event in
                     controller.handle(event)
                 }
             } catch {
@@ -256,6 +273,7 @@ public enum Daemon {
     @MainActor
     private static func startHotkey(
         _ monitor: HotkeyMonitor,
+        name: String,
         menuBar: MenuBarController,
         onEvent: @escaping @MainActor (HotkeyMonitor.Event) -> Void
     ) throws {
@@ -269,7 +287,7 @@ public enum Daemon {
                 throw StartupFailure.hotkeyUnavailable(error)
             }
             menuBar.setHotkeyHealth(.ok)
-            Log.info("listening on \(monitor.key.shortName) hold")
+            Log.info("listening on \(name) hold")
         }
 
         if AXIsProcessTrusted() {

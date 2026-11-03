@@ -4,7 +4,7 @@
 /// field a default and decode it in `init(from:)` with
 /// `decodeIfPresent(…) ?? default`, so older files and `{}` still load.
 struct OutputSettings: Codable, Equatable {
-    /// Paste (borrows the clipboard and restores it) or type the text. An
+    /// Paste or type the text; either way it stays on the clipboard. An
     /// unknown name decodes to paste.
     var injectMode: InjectMode = .paste
     /// Paste even when focus moved to another app or field during the

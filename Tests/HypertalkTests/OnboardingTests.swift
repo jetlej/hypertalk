@@ -21,9 +21,10 @@ final class OnboardingTests: XCTestCase {
         XCTAssertFalse(settings.onboarding.completed)
     }
 
-    func testHotkeyChoicesKeepAKeyChosenInSettings() {
-        XCTAssertEqual(Onboarding.hotkeyChoices(current: .fn), [.fn, .rightOption, .rightCommand, .rightControl])
-        XCTAssertEqual(Onboarding.hotkeyChoices(current: .leftShift).last, .leftShift)
+    func testTheDropdownOffersEveryKeyOnceWithFnFirst() {
+        XCTAssertEqual(Onboarding.hotkeyChoices.first, .fn)
+        XCTAssertEqual(Set(Onboarding.hotkeyChoices), Set(HotkeyKey.allCases))
+        XCTAssertEqual(Onboarding.hotkeyChoices.count, HotkeyKey.allCases.count)
     }
 
     func testLanguageMenuListsTheMacsLanguagesFirstWithoutRepeats() {
@@ -44,27 +45,28 @@ final class OnboardingTests: XCTestCase {
     }
 
     func testTheMacsLanguagesLeaveTheListUnset() {
-        let next = Onboarding.apply(hotkey: .rightOption, languages: ["es", "en"], preferred: ["en", "es"], to: Settings())
+        let next = Onboarding.apply(hotkey: .rightOption, lockMode: .singleTap, languages: ["es", "en"], preferred: ["en", "es"], to: Settings())
         XCTAssertNil(next.language.spoken)
         XCTAssertEqual(next.hotkey.key, .rightOption)
+        XCTAssertEqual(next.hotkey.lockMode, .singleTap)
         XCTAssertTrue(next.onboarding.completed)
     }
 
     func testAChangedListIsSaved() {
-        let next = Onboarding.apply(hotkey: .fn, languages: ["en", "fr"], preferred: ["en"], to: Settings())
+        let next = Onboarding.apply(hotkey: .fn, lockMode: .doubleTap, languages: ["en", "fr"], preferred: ["en"], to: Settings())
         XCTAssertEqual(next.language.spoken, ["en", "fr"])
     }
 
     func testEnglishGetsTheRecommendedParakeet() {
-        XCTAssertNil(Onboarding.apply(hotkey: .fn, languages: ["en"], preferred: ["en"], to: Settings()).model.id)
+        XCTAssertNil(Onboarding.apply(hotkey: .fn, lockMode: .doubleTap, languages: ["en"], preferred: ["en"], to: Settings()).model.id)
         var turbo = Settings()
         turbo.model.id = "whisper-large-v3-turbo"
-        XCTAssertNil(Onboarding.apply(hotkey: .fn, languages: ["en"], preferred: ["en"], to: turbo).model.id)
+        XCTAssertNil(Onboarding.apply(hotkey: .fn, lockMode: .doubleTap, languages: ["en"], preferred: ["en"], to: turbo).model.id)
     }
 
     func testOtherLanguagesPickTheBestModelForThem() {
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "es"], preferred: ["en"], to: Settings()).model.id, "parakeet-tdt-v3")
-        XCTAssertEqual(Onboarding.apply(hotkey: .fn, languages: ["en", "ja"], preferred: ["en"], to: Settings()).model.id, "whisper-large-v3-turbo")
+        XCTAssertEqual(Onboarding.apply(hotkey: .fn, lockMode: .doubleTap, languages: ["en", "es"], preferred: ["en"], to: Settings()).model.id, "parakeet-tdt-v3")
+        XCTAssertEqual(Onboarding.apply(hotkey: .fn, lockMode: .doubleTap, languages: ["en", "ja"], preferred: ["en"], to: Settings()).model.id, "whisper-large-v3-turbo")
     }
 
     func testStartsWithTheMacsLanguages() {

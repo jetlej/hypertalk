@@ -19,6 +19,13 @@ enum Theme {
         endPoint: .bottom
     )
 
+    /// White to ice, top to bottom: the primary button and a picked option.
+    static let whiteFill = LinearGradient(
+        colors: [.white, Color(red: 0.84, green: 0.89, blue: 1)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     /// Dark Aqua, so controls and text read on the black backdrop.
     static func applyAppearance(to window: NSWindow) {
         window.appearance = NSAppearance(named: .darkAqua)
@@ -79,6 +86,25 @@ struct Wordmark: View {
             .shadow(color: Theme.blue.opacity(0.55), radius: size * 0.35)
             .lineLimit(1)
             .fixedSize()
+    }
+}
+
+/// An onboarding page's question, in the wordmark's face and fill.
+struct PageTitle: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 44, weight: .black).width(.compressed))
+            .tracking(0.5)
+            .foregroundStyle(Theme.wordmark)
+            .shadow(color: Theme.blue.opacity(0.5), radius: 14)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
     }
 }
 

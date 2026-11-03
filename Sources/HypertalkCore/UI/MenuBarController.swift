@@ -10,7 +10,7 @@ import AppKit
 /// `DictationObserver` calls); its state lives in `MenuPanelModel`.
 @MainActor
 final class MenuBarController {
-    private static func readyStatus(_ key: HotkeyKey) -> String { "Ready · hold \(key.shortName) to dictate" }
+    private static func readyStatus(_ hotkey: String) -> String { "Ready · hold \(hotkey) to dictate" }
 
     private let statusItem: NSStatusItem
     /// What the panel shows; the panel observes it.
@@ -30,13 +30,53 @@ final class MenuBarController {
     /// claim fn works when it does not (#37).
     private var hotkeyHealth: HotkeyHealth = .ok
     /// The key the idle line tells the user to hold (#42).
-    private var hotkey: HotkeyKey = .fn
+    /// The hotkey's short name: "fn", "right ⌥", "⌃ ⌥ Space".
+    private var hotkey = HotkeyKey.fn.shortName
     private var isIdle = true
     private var idleStatus: String { hotkeyHealth.statusText.map(Self.capitalized) ?? Self.readyStatus(hotkey) }
 
+    /// The status item's name in the app's defaults, where macOS keeps its
+    /// position in the menu bar.
+    static let autosaveName = "hypertalk"
+
+    /// A position just left of the leftmost of Apple's shown icons, from
+    /// Control Center's defaults: positions count from the right end of the
+    /// menu bar, and an icon is shown when its "Visible" or "VisibleCC" key
+    /// is 1. Nil when none is found.
+    nonisolated static func preferredPosition(controlCenter: [String: Any]) -> Double? {
+        let prefix = "NSStatusItem Preferred Position "
+        let positions = controlCenter.compactMap { key, value -> Double? in
+            guard key.hasPrefix(prefix) else { return nil }
+            let name = key.dropFirst(prefix.count)
+            let shown = [controlCenter["NSStatusItem Visible \(name)"], controlCenter["NSStatusItem VisibleCC \(name)"]]
+                .contains { ($0 as? NSNumber)?.boolValue == true }
+            return shown ? (value as? NSNumber)?.doubleValue : nil
+        }
+        return positions.max().map { $0 + 1 }
+    }
+
+    /// Called when `checkIconVisibility()` finds the icon hidden.
+    var onIconHidden: (() -> Void)?
+
     init(modelID: String) {
+        // macOS adds new menu-bar icons at the left end, where a crowded bar
+        // or the notch hides them. Ask, once, for the spot just left of
+        // Apple's icons, ahead of other apps', as menu-bar managers do; a
+        // later ⌘-drag by the person overwrites this and is kept. 1, which
+        // an earlier development build saved, put the icon among Apple's own.
+        let positionKey = "NSStatusItem Preferred Position \(Self.autosaveName)"
+        let saved = UserDefaults.standard.object(forKey: positionKey) as? Double
+        if saved == nil || saved == 1 {
+            let controlCenter = UserDefaults(suiteName: "com.apple.controlcenter")?.dictionaryRepresentation() ?? [:]
+            if let position = Self.preferredPosition(controlCenter: controlCenter) {
+                UserDefaults.standard.set(position, forKey: positionKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: positionKey)
+            }
+        }
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        panelModel.status = Self.readyStatus(.fn)
+        statusItem.autosaveName = Self.autosaveName
+        panelModel.status = Self.readyStatus(hotkey)
         panelModel.model = modelID
         configureButton()
     }
@@ -50,8 +90,8 @@ final class MenuBarController {
         if isIdle { showIdle() }
     }
 
-    func setHotkey(_ key: HotkeyKey) {
-        hotkey = key
+    func setHotkey(_ name: String) {
+        hotkey = name
         if isIdle { showIdle() }
     }
 
@@ -80,6 +120,42 @@ final class MenuBarController {
         button.target = self
         button.action = #selector(togglePanel)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+
+    /// Whether the icon is really on screen: not pushed off a full menu bar
+    /// and not behind the notch.
+    func iconIsVisible() -> Bool {
+        guard let window = statusItem.button?.window else { return false }
+        let frame = window.frame
+        let screen = window.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(frame) })
+        return Self.isVisible(
+            icon: frame,
+            screen: screen?.frame,
+            leftOfNotch: screen?.auxiliaryTopLeftArea,
+            rightOfNotch: screen?.auxiliaryTopRightArea,
+            occluded: !window.occlusionState.contains(.visible)
+        )
+    }
+
+    /// `iconIsVisible` without the window, so it is tested: on a screen,
+    /// not between the menu-bar areas either side of a notch, not occluded.
+    nonisolated static func isVisible(icon: NSRect, screen: NSRect?, leftOfNotch: NSRect?, rightOfNotch: NSRect?, occluded: Bool) -> Bool {
+        guard let screen, screen.contains(icon.insetBy(dx: 1, dy: 1)) else { return false }
+        if let left = leftOfNotch, let right = rightOfNotch, icon.midX > left.maxX, icon.midX < right.minX {
+            return false
+        }
+        return !occluded
+    }
+
+    /// Checks the icon and, if it's hidden, says so in Settings and calls
+    /// `onIconHidden`.
+    func checkIconVisibility() {
+        let frame = statusItem.button?.window?.frame ?? .zero
+        let visible = iconIsVisible()
+        MenuBarStatus.shared.iconHidden = !visible
+        // The frame is screen geometry only.
+        Log.info("menu-bar icon at x=\(Int(frame.minX)) on a \(Int(NSScreen.main?.frame.width ?? 0))-pt screen: \(visible ? "visible" : "hidden")")
+        if !visible { onIconHidden?() }
     }
 
     @objc private func togglePanel() {
@@ -124,6 +200,13 @@ final class MenuBarController {
 
 }
 
+/// Whether the menu-bar icon is out of sight, for the Settings banner.
+@MainActor
+final class MenuBarStatus: ObservableObject {
+    static let shared = MenuBarStatus()
+    @Published var iconHidden = false
+}
+
 extension MenuBarController: DictationObserver {
     func dictationStarted() {
         isIdle = false
@@ -134,7 +217,7 @@ extension MenuBarController: DictationObserver {
     func dictationLocked() {
         isIdle = false
         panelModel.phase = .recording
-        setStatus("Recording · press \(hotkey.shortName) to stop")
+        setStatus("Recording · press \(hotkey) to stop")
     }
 
     func dictationTranscribing() {

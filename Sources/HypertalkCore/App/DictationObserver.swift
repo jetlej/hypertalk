@@ -26,7 +26,8 @@ struct DictationResult: Equatable, Sendable {
 enum DictationError: Error {
     /// The hotkey was released with no audio captured.
     case noAudio
-    /// The recording was discarded: a short tap, a chord, or a hotkey switch (#42).
+    /// The recording was discarded: a short tap, a chord, a hotkey switch
+    /// (#42), or a capture too short to hold a word.
     case cancelled
 }
 

@@ -28,14 +28,12 @@ enum Onboarding {
         isApp && (!completed || !state.allGranted)
     }
 
-    /// The keys offered for a first pick. The left-hand keys and Shift are
-    /// held for shortcuts and capitals, so they stay in Settings only. A
-    /// current key outside these is kept, so the window never changes it by
-    /// showing it.
-    static func hotkeyChoices(current: HotkeyKey) -> [HotkeyKey] {
-        let keys: [HotkeyKey] = [.fn, .rightOption, .rightCommand, .rightControl]
-        return keys.contains(current) ? keys : keys + [current]
-    }
+    /// Every key, in the onboarding dropdown's order: fn, then the right-hand
+    /// keys, which no shortcut uses, then the left, with Shift last.
+    static let hotkeyChoices: [HotkeyKey] = [
+        .fn, .rightOption, .rightCommand, .rightControl,
+        .leftOption, .leftCommand, .leftControl, .rightShift, .leftShift,
+    ]
 
     /// Languages many people dictate in, offered right after the Mac's own.
     static let commonLanguages = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ko", "hi", "ar"]
@@ -73,7 +71,8 @@ enum Onboarding {
         }
     }
 
-    /// `settings` after Get Started with `hotkey` and `languages` ticked.
+    /// `settings` after Get Started with `hotkey`, `lockMode` and `languages`
+    /// picked.
     ///
     /// Ticking exactly the Mac's languages leaves `language.spoken` unset, so
     /// it keeps following the Mac. The model changes only when it can't hear
@@ -82,12 +81,16 @@ enum Onboarding {
     /// which for a new user is the recommended Base.
     static func apply(
         hotkey: HotkeyKey,
+        custom: CustomHotkey? = nil,
+        lockMode: LockMode,
         languages: [String],
         preferred: [String],
         to settings: Settings
     ) -> Settings {
         var next = settings
         next.hotkey.key = hotkey
+        next.hotkey.custom = custom
+        next.hotkey.lockMode = lockMode
         let mac = preferred.filter(SpokenLanguage.whisperLanguages.contains)
         next.language.spoken = Set(languages) == Set(mac) ? nil : languages
         // The model follows the languages: Parakeet for English or Europe's
